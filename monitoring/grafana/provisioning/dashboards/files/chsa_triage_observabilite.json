@@ -1,0 +1,216 @@
+{
+  "title": "CHSA Triage — Observabilité (pilotage)",
+  "uid": "chsa-triage-observabilite",
+  "tags": ["m15_ocr", "chsa-triage"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "configuration",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "Prometheus" },
+        "query": "label_values(chsa_journal_entrees_total, configuration)",
+        "includeAll": true,
+        "multi": true,
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "refresh": 2
+      },
+      {
+        "name": "precio_1k_tokens",
+        "type": "textbox",
+        "label": "Prix estimé (USD / 1k tokens)",
+        "query": "0.002",
+        "current": { "selected": true, "text": "0.002", "value": "0.002" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Volume de requêtes (R9)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(chsa_journal_entrees_total{configuration=~\"$configuration\"}[5m])) by (type_evenement)",
+          "legendFormat": "{{type_evenement}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "id": 2,
+      "title": "Latence (p50 / p95) — R1 + D2",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(chsa_journal_latence_secondes_bucket{configuration=~\"$configuration\"}[5m])) by (le, type_evenement))",
+          "legendFormat": "p50 — {{type_evenement}}"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(chsa_journal_latence_secondes_bucket{configuration=~\"$configuration\"}[5m])) by (le, type_evenement))",
+          "legendFormat": "p95 — {{type_evenement}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "id": 3,
+      "title": "Taux d'échec d'inférence (R10)",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 4, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "(sum(rate(chsa_journal_erreurs_total{configuration=~\"$configuration\"}[15m])) / sum(rate(chsa_journal_entrees_total{configuration=~\"$configuration\"}[15m]))) or vector(0)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.02 },
+              { "color": "red", "value": 0.05 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "title": "Respect du format de diagnostic (D1)",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 4, "x": 4, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "(sum(chsa_diagnostic_format_respecte_total{configuration=~\"$configuration\",format_respecte=\"True\"}) / sum(chsa_diagnostic_format_respecte_total{configuration=~\"$configuration\"})) or vector(0)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 0.9 },
+              { "color": "green", "value": 0.98 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "title": "Taux d'échec par conversation (C6)",
+      "type": "stat",
+      "description": "Parmi les conversations qui aboutissent à un diagnostic : proportion ayant connu au moins un échec d'inférence en route. Les conversations qui échouent et ne sont jamais relancées jusqu'au diagnostic ne sont pas comptées (limite connue, voir docs/00_architecture.md).",
+      "gridPos": { "h": 8, "w": 4, "x": 8, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "(sum(chsa_conversation_avec_echec_total{configuration=~\"$configuration\",avec_echec=\"True\"}) / sum(chsa_conversation_avec_echec_total{configuration=~\"$configuration\"})) or vector(0)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.1 },
+              { "color": "red", "value": 0.25 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "title": "Nombre de tours avant diagnostic (médiane) — C1",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 4, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(chsa_conversation_nombre_tours_bucket{configuration=~\"$configuration\"}[30m])) by (le))"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "none", "decimals": 1 }, "overrides": [] }
+    },
+    {
+      "id": 9,
+      "title": "Temps jusqu'au diagnostic (médiane) — C2",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 4, "x": 16, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(chsa_conversation_temps_diagnostic_secondes_bucket{configuration=~\"$configuration\"}[30m])) by (le))"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 1 }, "overrides": [] }
+    },
+    {
+      "id": 10,
+      "title": "Taux de reformulation (par conversation) — C3",
+      "type": "stat",
+      "description": "Reformulations de diagnostic (diagnostic_reformule) rapportées au nombre de conversations closes dans la même fenêtre — une moyenne de reformulations par conversation, pas un pourcentage.",
+      "gridPos": { "h": 8, "w": 4, "x": 20, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "(sum(increase(chsa_conversation_reformulation_total{configuration=~\"$configuration\"}[1h])) / sum(increase(chsa_conversation_nombre_tours_count{configuration=~\"$configuration\"}[1h]))) or vector(0)"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "none", "decimals": 2 }, "overrides": [] }
+    },
+    {
+      "id": 7,
+      "title": "Tokens de sortie (p50 / p95) — R2 + D3",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(chsa_journal_tokens_sortie_bucket{configuration=~\"$configuration\"}[5m])) by (le, type_evenement))",
+          "legendFormat": "p50 — {{type_evenement}}"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(chsa_journal_tokens_sortie_bucket{configuration=~\"$configuration\"}[5m])) by (le, type_evenement))",
+          "legendFormat": "p95 — {{type_evenement}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] }
+    },
+    {
+      "id": 8,
+      "title": "Coût estimé (indicatif) — X2",
+      "type": "timeseries",
+      "description": "Formule Grafana pure, aucune nouvelle métrique Python : somme des tokens de sortie × prix/1k token réglable ci-dessus. Les configurations staging sont auto-hébergées et gratuites — ce panneau sert de point de comparaison avec un déploiement payant (vLLM/Space), pas une facture réelle.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "sum(increase(chsa_journal_tokens_sortie_sum{configuration=~\"$configuration\",type_evenement=\"diagnostic\"}[1h])) * $precio_1k_tokens / 1000"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" }, "overrides": [] }
+    }
+  ]
+}

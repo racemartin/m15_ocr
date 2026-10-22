@@ -1,0 +1,12 @@
+# Provisionne la source de données Prometheus automatiquement au démarrage
+# de Grafana — pas de clic manuel dans l'interface.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true

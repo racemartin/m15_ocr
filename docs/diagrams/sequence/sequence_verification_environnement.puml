@@ -1,0 +1,43 @@
+@startuml sequence_verification_environnement
+skinparam backgroundColor white
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+
+title m15_ocr — Séquence : ServiceVerificationEnvironnement.executer() (F0/F1)
+
+actor "CLI\n(verifier_environnement\nou servir_metriques)" as CLI
+participant "ServiceVerificationEnvironnement" as SERVICE
+participant "VerificateurConnectivite\n(un par dépendance)" as VERIF
+participant "ExportateurMetriques" as METRIQUES
+participant "LogTool" as LOG
+
+CLI -> SERVICE : executer()
+activate SERVICE
+
+SERVICE -> LOG : START_ACTION(n vérificateurs)
+
+loop pour chaque vérificateur enregistré
+  SERVICE -> VERIF : verifier()
+  activate VERIF
+  VERIF --> SERVICE : ResultatVerification\n(disponible, detail, duree_ms)
+  deactivate VERIF
+end
+
+loop pour chaque résultat obtenu
+  alt exportateur_metriques fourni
+    SERVICE -> METRIQUES : incrementer_compteur(\n  "chsa_verification_dependance_disponible",\n  {nom, disponible, ...etiquettes_globales})
+    SERVICE -> METRIQUES : observer_duree(\n  "chsa_verification_dependance_duree_secondes",\n  duree_ms/1000, {nom, ...etiquettes_globales})
+  else exportateur_metriques absent
+    SERVICE -> SERVICE : ne rien faire\n(rétrocompatible F0)
+  end
+end
+
+SERVICE -> LOG : PARAMETER_VALUE(tout_dispo)
+SERVICE -> LOG : FINISH_ACTION
+
+SERVICE --> CLI : RapportVerificationEnvironnement\n(resultats, tout_dispo)
+deactivate SERVICE
+
+@enduml

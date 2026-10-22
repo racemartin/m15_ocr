@@ -1,0 +1,13 @@
+# Provisionne le tableau de bord initial depuis le fichier JSON voisin —
+# lu à chaque démarrage, pas une copie figée en base.
+apiVersion: 1
+
+providers:
+  - name: chsa-triage-observabilite
+    orgId: 1
+    folder: ""
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/provisioning/dashboards/files

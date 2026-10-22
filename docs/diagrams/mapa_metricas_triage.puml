@@ -1,0 +1,33 @@
+@startuml mapa_metricas_triage
+allowmixing
+skinparam backgroundColor white
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #555555
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #555555
+}
+
+title Carte des métriques — domaine du triage CHSA\nConversation → Question/Réponse → Diagnostic
+
+legend top left
+  <color:#1A7A1A>●</color> construite (en production)
+  <color:#B8860B>●</color> dérivable (donnée dispo, logique à écrire)
+  <color:#CC0000>●</color> indisponible (nécessite F4, hors périmètre)
+endlegend
+
+rectangle "**C — CONVERSATION**\n(ServiceAnalyseConversations, F3)\n\n<color:#1A7A1A>●</color> **C1** Nb de tours avant diagnostic\n<color:#1A7A1A>●</color> **C2** Temps jusqu'au diagnostic\n<color:#1A7A1A>●</color> **C3** Taux de reformulation\n<color:#B8860B>●</color> **C4** Durée totale de la conversation (écartée, redondante avec C2)\n<color:#CC0000>●</color> **C5** Taux d'abandon (jamais de diagnostic)\n<color:#1A7A1A>●</color> **C6** Taux d'échec par conversation\n<color:#CC0000>●</color> **C7** Efficacité clinique du diagnostic" as C #E3F2E3
+
+rectangle "**R — QUESTION / RÉPONSE**\n(ServiceInstrumentationJournal, F2)\n\n<color:#1A7A1A>●</color> **R1** Latence de la réponse\n<color:#1A7A1A>●</color> **R2** Tokens de sortie\n<color:#B8860B>●</color> **R3** Tokens / seconde\n<color:#CC0000>●</color> **R4** Longueur de la question générée\n<color:#CC0000>●</color> **R5** Pertinence (heuristique)\n<color:#CC0000>●</color> **R6** Pertinence (RAGAS / juge)\n<color:#B8860B>●</color> **R7** Position du tour dans la conversation\n<color:#CC0000>●</color> **R8** Dégénérescence / boucle\n<color:#1A7A1A>●</color> **R9** Volume de requêtes\n<color:#1A7A1A>●</color> **R10** Taux d'erreur" as R #E3ECF9
+
+rectangle "**D — DIAGNOSTIC**\n(ServiceInstrumentationJournal, F2 / futur F4)\n\n<color:#1A7A1A>●</color> **D1** Conformité du format\n<color:#1A7A1A>●</color> **D2** Latence du diagnostic\n<color:#1A7A1A>●</color> **D3** Tokens de sortie\n<color:#CC0000>●</color> **D4** Niveau ESI\n<color:#CC0000>●</color> **D5** Longueur du raisonnement\n<color:#CC0000>●</color> **D6** Distribution des niveaux ESI\n<color:#CC0000>●</color> **D7** Cas ESI urgents (1-2) et leur latence" as D #FBE8E8
+
+rectangle "**X — TRANSVERSALES**\n(toutes couches confondues)\n\n<color:#1A7A1A>●</color> **X1** Comparaison entre configurations\n<color:#1A7A1A>●</color> **X2** Coût estimé cumulé\n<color:#B8860B>●</color> **X3** Carte de chaleur de l'activité\n<color:#CC0000>●</color> **X4** Latence inférence pure vs HTTP totale" as X #F3E9FB
+
+C -right-> R : alimente le\nprochain tour
+R -right-> D : clôture par\nle diagnostic
+D -down-> X : comparé entre\nconfigurations
+
+@enduml

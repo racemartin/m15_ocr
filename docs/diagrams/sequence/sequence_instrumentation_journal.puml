@@ -1,0 +1,53 @@
+@startuml sequence_instrumentation_journal
+skinparam backgroundColor white
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+
+title m15_ocr — Séquence : ServiceInstrumentationJournal.executer() (F2)
+
+actor "CLI\n(instrumenter_journal\nou servir_metriques)" as CLI
+participant "ServiceInstrumentationJournal" as SERVICE
+participant "LecteurJournalAudit\n(JsonlLecteurJournalAudit)" as LECTEUR
+participant "ExportateurMetriques" as METRIQUES
+participant "LogTool" as LOG
+
+CLI -> SERVICE : executer()
+activate SERVICE
+
+SERVICE -> LOG : START_ACTION("lecture du journal d'audit")
+
+SERVICE -> LECTEUR : lire_nouvelles_entrees()
+activate LECTEUR
+note right of LECTEUR
+  Reprend depuis le curseur
+  mémorisé sur disque
+  (<chemin>.curseur), jamais
+  depuis le début du fichier.
+end note
+LECTEUR --> SERVICE : list<EntreeJournalAudit>
+deactivate LECTEUR
+
+loop pour chaque nouvelle entrée
+  SERVICE -> METRIQUES : incrementer_compteur(\n  "chsa_journal_entrees_total",\n  {type_evenement, ...etiquettes_globales})
+
+  alt type_evenement == "echec_inference"
+    SERVICE -> METRIQUES : incrementer_compteur(\n  "chsa_journal_erreurs_total",\n  {type_erreur, ...etiquettes_globales})
+  else tour_entretien ou diagnostic
+    opt "latence_ms" présente dans metadonnees
+      SERVICE -> METRIQUES : observer_duree(\n  "chsa_journal_latence_secondes",\n  latence_ms/1000, {type_evenement, ...})
+    end
+    opt "format_respecte" présente dans metadonnees
+      SERVICE -> METRIQUES : incrementer_compteur(\n  "chsa_diagnostic_format_respecte_total",\n  {format_respecte, ...etiquettes_globales})
+    end
+  end
+end
+
+SERVICE -> LOG : PARAMETER_VALUE(nombre_entrees)
+SERVICE -> LOG : FINISH_ACTION
+
+SERVICE --> CLI : RapportInstrumentationJournal\n(nombre_entrees)
+deactivate SERVICE
+
+@enduml

@@ -1,0 +1,42 @@
+# Pile d'observabilité minimale : Prometheus scrape le serveur continu
+# `uv run servir-metriques` (lancé sur l'hôte, hors conteneur — voir
+# monitoring/prometheus/prometheus.yml), Grafana affiche un premier
+# tableau de bord provisionné automatiquement. Liste de panneaux destinée
+# à grandir au fil du temps (docs/00_architecture.md "Ce qui viendra
+# ensuite"), jamais figée.
+#
+# Démarrage : docker compose up -d
+# Grafana   : http://localhost:3000 (admin / voir GRAFANA_ADMIN_PASSWORD)
+# Prometheus: http://localhost:9090
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: chsa-observabilite-prometheus
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: chsa-observabilite-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  prometheus-data:
+  grafana-data:

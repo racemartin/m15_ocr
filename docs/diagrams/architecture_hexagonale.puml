@@ -1,0 +1,92 @@
+@startuml architecture_hexagonale
+allowmixing
+skinparam backgroundColor white
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam ArrowColor #555555
+
+title m15_ocr — Architecture hexagonale (ports et adaptateurs)\nÉtat actuel : F0 connectivité, F1 métriques, F2 journal d'audit
+
+package "domain" as DOMAIN #CFE8FF {
+  class ResultatVerification <<model>> {
+    + nom : str
+    + disponible : bool
+    + detail : str
+    + duree_ms : float
+  }
+  class EntreeJournalAudit <<model>> {
+    + type_evenement : str
+    + conversation_id : str
+    + metadonnees : dict
+  }
+  interface VerificateurConnectivite <<port>> {
+    + verifier() : ResultatVerification
+  }
+  interface ExportateurMetriques <<port>> {
+    + incrementer_compteur()
+    + observer_duree()
+  }
+  interface LecteurJournalAudit <<port>> {
+    + lire_nouvelles_entrees() : list
+  }
+}
+
+package "application" as APPLICATION #D8F5D0 {
+  class ServiceVerificationEnvironnement <<use case>> {
+    + executer() : RapportVerificationEnvironnement
+  }
+  class ServiceInstrumentationJournal <<use case>> {
+    + executer() : RapportInstrumentationJournal
+  }
+}
+
+package "infrastructure.adapters" as INFRA #FFE3C4 {
+  class HuggingFaceVerificateurConnectivite <<adapter>>
+  class UrlVerificateurConnectivite <<adapter>>
+  class PrometheusExportateurMetriques <<adapter>> {
+    + exposer_texte() : bytes
+  }
+  class JsonlLecteurJournalAudit <<adapter>> {
+    + curseur sur disque
+  }
+}
+
+package "interfaces.cli" as CLI #F5D0E8 {
+  class verifier_environnement <<entry point>>
+  class instrumenter_journal <<entry point>>
+}
+
+cloud "Dépendances externes (HTTP)" as EXT #EDEDED {
+  node "Hugging Face Hub" as HF
+  node "API chsa-triage (m14_ocr)\n/sante" as CHSA
+  node "MLflow" as MLFLOW
+}
+
+node "m14_ocr (NON MODIFIÉ)\nsystème audité" as M14 #FFD6D6
+file "journal_audit__<config>.jsonl\n(fichier LOCAL, même machine)" as JOURNAL #FFD6D6
+
+CLI --> APPLICATION : construit et exécute
+APPLICATION --> DOMAIN : dépend des ports, pas des adaptateurs
+INFRA ..|> DOMAIN : implémente les ports du domaine
+CLI --> INFRA : injecte les adaptateurs concrets
+
+HuggingFaceVerificateurConnectivite --> HF
+UrlVerificateurConnectivite --> CHSA
+UrlVerificateurConnectivite --> MLFLOW
+CHSA .right.> M14 : exposé par
+
+PrometheusExportateurMetriques -[#CC0000]-> CLI : data/metriques_*.prom\n(écrit sur disque)
+
+JsonlLecteurJournalAudit .down.> JOURNAL : lecture locale\n(F2, pas de HTTP)
+JOURNAL .right.> M14 : écrit par
+
+note bottom of M14
+  m15_ocr ne modifie jamais m14_ocr.
+  Il l'audite depuis l'extérieur (HTTP pour /sante
+  et les métriques, lecture locale pour le journal
+  d'audit) — jamais en éditant son code.
+end note
+
+@enduml

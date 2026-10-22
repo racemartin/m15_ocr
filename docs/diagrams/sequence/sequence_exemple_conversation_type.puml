@@ -1,0 +1,99 @@
+@startuml sequence_exemple_conversation_type
+skinparam backgroundColor white
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam noteBackgroundColor #FFF6CC
+skinparam noteBorderColor #CCAA00
+
+title Exemple générique — Conversation type (3 tours + diagnostic)\nchsa-triage (m14_ocr) : où et comment chaque latence est mesurée
+
+actor "Infirmier\n(Streamlit ou client HTTP)" as INF
+participant "API chsa-triage\n(PoursuivreEntretienUseCase /\nObtenirDiagnosticUseCase)" as API
+participant "MoteurInference\n(adaptateur : llama.cpp, vLLM...)" as MOTEUR
+database "JournalAudit" as JOURNAL
+
+== Tour 1 : première question du patient ==
+
+INF -> API : POST /conversations/{id}/messages\n{"message": "Douleur thoracique depuis 30 min..."}
+activate API
+
+API -> API : construit messages_pour_modele\n(historique + nouveau message)
+
+API -> MOTEUR : generer(messages, parametres)
+activate MOTEUR
+hnote over MOTEUR #FFD6D6 : **debut = time.perf_counter()**
+MOTEUR -> MOTEUR : appel HTTP réel au serveur\nde modèle (ex. llama-server /v1/chat/completions)
+hnote over MOTEUR #FFD6D6 : **latence_ms = (time.perf_counter() - debut) * 1000**
+MOTEUR --> API : ReponseModele\n(texte, latence_ms, nombre_tokens_sortie)
+deactivate MOTEUR
+
+API -> JOURNAL : consigner(EntreeAudit{\n  type_evenement="tour_entretien",\n  metadonnees={latence_ms, nombre_tokens_sortie}})
+
+API --> INF : message_assistant\n("Quelle est la durée exacte ?")
+deactivate API
+
+== Tour 2 : deuxième question du patient ==
+
+INF -> API : POST /conversations/{id}/messages\n{"message": "Depuis 30 minutes, sans interruption."}
+activate API
+API -> API : construit messages_pour_modele\n(historique complet + nouveau message)
+API -> MOTEUR : generer(messages, parametres)
+activate MOTEUR
+hnote over MOTEUR #FFD6D6 : **debut = time.perf_counter()**
+MOTEUR -> MOTEUR : appel HTTP réel
+hnote over MOTEUR #FFD6D6 : **latence_ms = (time.perf_counter() - debut) * 1000**
+MOTEUR --> API : ReponseModele(texte, latence_ms, nombre_tokens_sortie)
+deactivate MOTEUR
+API -> JOURNAL : consigner(EntreeAudit{type_evenement="tour_entretien", ...})
+API --> INF : message_assistant\n("Avez-vous des antécédents cardiaques ?")
+deactivate API
+
+== Tour 3 : troisième question du patient ==
+
+INF -> API : POST /conversations/{id}/messages\n{"message": "Infarctus il y a 3 ans."}
+activate API
+API -> API : construit messages_pour_modele\n(historique complet + nouveau message)
+API -> MOTEUR : generer(messages, parametres)
+activate MOTEUR
+hnote over MOTEUR #FFD6D6 : **debut = time.perf_counter()**
+MOTEUR -> MOTEUR : appel HTTP réel
+hnote over MOTEUR #FFD6D6 : **latence_ms = (time.perf_counter() - debut) * 1000**
+MOTEUR --> API : ReponseModele(texte, latence_ms, nombre_tokens_sortie)
+deactivate MOTEUR
+API -> JOURNAL : consigner(EntreeAudit{type_evenement="tour_entretien", ...})
+API --> INF : message_assistant\n("Sueurs ou essoufflement associés ?")
+deactivate API
+
+== Demande de diagnostic (déclenchée par l'infirmier, jamais automatique) ==
+
+INF -> API : POST /conversations/{id}/diagnostic
+activate API
+API -> API : construit l'historique complet\n(3 tours + prompt de diagnostic)
+
+API -> MOTEUR : generer(messages, parametres_diagnostic)
+activate MOTEUR
+hnote over MOTEUR #FFD6D6 : **debut = time.perf_counter()**
+MOTEUR -> MOTEUR : appel HTTP réel\n(sortie JSON structurée attendue)
+hnote over MOTEUR #FFD6D6 : **latence_ms = (time.perf_counter() - debut) * 1000**
+MOTEUR --> API : ReponseModele\n(texte_json, latence_ms, nombre_tokens_sortie)
+deactivate MOTEUR
+
+API -> API : parse le JSON,\ncalcule format_respecte = (diagnostic is not None)
+
+API -> JOURNAL : consigner(EntreeAudit{\n  type_evenement="diagnostic",\n  metadonnees={format_respecte, latence_ms, nombre_tokens_sortie}})
+
+API --> INF : DiagnosticReponse\n(format_respecte, niveau, categorie,\nressources_estimees, raisonnement)
+deactivate API
+
+note over INF, JOURNAL #E8F4FF
+  **Principe de mesure, identique à chaque appel** : la latence n'entoure QUE
+  l'appel réseau réel vers le moteur d'inférence (`time.perf_counter()` juste
+  avant/après `client.post` ou équivalent) — jamais la construction du prompt,
+  jamais le parsing, jamais l'écriture dans le journal. C'est ce nombre précis
+  qui finit dans `metadonnees.latence_ms`, puis dans
+  `chsa_journal_latence_secondes` côté m15_ocr.
+end note
+
+@enduml

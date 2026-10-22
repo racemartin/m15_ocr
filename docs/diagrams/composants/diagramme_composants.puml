@@ -1,0 +1,96 @@
+@startuml diagramme_composants
+skinparam backgroundColor white
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #555555
+skinparam componentStyle rectangle
+skinparam nodesep 60
+skinparam ranksep 70
+
+title m15_ocr — Diagramme de composants
+
+package "m15_ocr" #D8F5D0 {
+  package "interfaces.cli" {
+    component "[verifier-environnement]\n(F0, ponctuel)" as VERIF
+    component "[instrumenter-journal]\n(F2, ponctuel)" as INSTR
+    component "[servir-metriques]\n(scraping continu, orchestre\nles cas d'usage ci-dessous)" as SERVIR
+    component "[fabrique_adaptateurs]\n(composition root)" as FABRIQUE
+  }
+
+  package "application.services" {
+    component "[ServiceInstrumentationJournal]\n(F2)" as SVC_INSTR
+    component "[ServiceAnalyseConversations]\n(F3)" as SVC_CONV
+  }
+
+  VERIF ..> FABRIQUE : utilise
+  INSTR ..> FABRIQUE : utilise
+  SERVIR ..> FABRIQUE : utilise
+
+  INSTR ..> SVC_INSTR : utilise
+  SERVIR ..> SVC_INSTR : utilise\n(1 cycle / 30s)
+  SERVIR ..> SVC_CONV : utilise\n(1 cycle / 30s)
+}
+
+component "[Hugging Face Hub]" as HF #EDEDED
+component "[MLflow]" as MLFLOW #EDEDED
+
+package "m14_ocr (NON MODIFIÉ)" #FFD6D6 {
+  component "[API chsa-triage]" as M14_API
+  artifact "journal_audit__<config>.jsonl" as M14_JOURNAL
+  M14_API ..> M14_JOURNAL : écrit
+}
+
+package "Docker (docker-compose.yml)" #D6E8FF {
+  component "[Prometheus]\nport 9090" as PROM
+  component "[Grafana]\nport 3000" as GRAFANA
+  artifact "monitoring/prometheus/\nprometheus.yml" as CONF_PROM
+  artifact "monitoring/grafana/provisioning/\ndatasources/datasource.yml" as CONF_DS
+  artifact "monitoring/grafana/provisioning/\ndashboards/dashboards.yml\n+ files/*.json" as CONF_DASH
+
+  CONF_PROM ..> PROM : configure\n(cible de scrape)
+  CONF_DS ..> GRAFANA : configure\n(connexion Prometheus)
+  CONF_DASH ..> GRAFANA : configure\n(tableau de bord)
+  GRAFANA -down-> PROM : requête PromQL\n(réseau docker interne, :9090)
+}
+
+VERIF -down-> HF : requiert
+VERIF -down-> MLFLOW : requiert
+VERIF -right-> M14_API : requiert\n/sante
+
+SVC_INSTR -right-> M14_JOURNAL : lecture locale\ncurseur ".curseur"
+SVC_CONV -right-> M14_JOURNAL : lecture locale\ncurseur\n".curseur_conversations"
+
+SERVIR -right-> M14_API : requiert\n/sante
+
+note top of SERVIR
+  orchestre aussi ServiceVerificationEnvironnement
+  (F0/F1, non détaillé ici — voir [verifier-environnement])
+end note
+
+interface "/metrics\n(HTTP continu, :9200)" as IF_METRICS
+interface ".prom\n(instantané disque)" as IF_PROM
+interface ":3000\n(navigateur)" as IF_GRAFANA
+
+SERVIR -up-> IF_METRICS : expose
+VERIF -up-> IF_PROM : produit
+INSTR -up-> IF_PROM : produit
+GRAFANA -up-> IF_GRAFANA : expose
+
+PROM -up-> IF_METRICS : scrape\n(host.docker.internal:9200)
+
+note bottom of M14_API
+  m15_ocr ne consomme que des interfaces
+  déjà exposées par m14_ocr. Aucun composant
+  de m15_ocr n'est importé par m14_ocr, et
+  aucun fichier de m14_ocr n'est modifié.
+end note
+
+note bottom of GRAFANA
+  servir-metriques tourne sur l'hôte, hors
+  conteneur (accès local au système de fichiers).
+  Prometheus l'atteint via host.docker.internal,
+  jamais l'inverse.
+end note
+
+@enduml

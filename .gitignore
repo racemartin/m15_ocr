@@ -1,0 +1,19 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Secrets locaux (jamais commités, voir .env.example)
+.env
+
+# Métadonnées macOS
+.DS_Store
+
+# Artefacts générés à l'exécution (métriques, index...), jamais du code source
+data/

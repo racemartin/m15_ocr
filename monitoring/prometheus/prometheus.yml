@@ -1,0 +1,15 @@
+# Configuration Prometheus minimale : une seule cible, le serveur continu
+# `uv run servir-metriques` (voir docs/00_architecture.md "Scraping continu").
+# Ce serveur tourne sur l'hôte (hors conteneur), pas dans docker-compose :
+# il a besoin d'un accès local au système de fichiers (journal d'audit de
+# m14_ocr, fichiers d'état) qu'un conteneur isolé n'a pas par défaut.
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: chsa-triage-observabilite
+    static_configs:
+      # :9200 = staging1_local_gguf, :9201 = staging2_local_transformers_peft —
+      # deux instances de `servir-metriques`, une par configuration auditée,
+      # chacune avec sa propre étiquette "configuration" (jamais mélangées).
+      - targets: ["host.docker.internal:9200", "host.docker.internal:9201"]

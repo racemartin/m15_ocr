@@ -1,0 +1,142 @@
+@startuml diagramme_classes
+skinparam backgroundColor white
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam ArrowColor #555555
+skinparam classAttributeIconSize 0
+
+title m15_ocr — Diagramme de classes
+
+package "domain.model" #CFE8FF {
+  class ResultatVerification <<frozen dataclass>> {
+    + nom : str
+    + disponible : bool
+    + detail : str
+    + duree_ms : float
+  }
+  class EntreeJournalAudit <<frozen dataclass>> {
+    + horodatage : str
+    + type_evenement : str
+    + conversation_id : str
+    + version_modele : str
+    + metadonnees : dict
+  }
+  class EtatConversationAccumule <<frozen dataclass>> {
+    + nombre_tours : int
+    + horodatage_premier_tour : str
+    + a_eu_un_echec : bool
+  }
+}
+
+package "domain.ports" #CFE8FF {
+  interface VerificateurConnectivite <<Protocol>> {
+    + verifier() : ResultatVerification
+  }
+  interface ExportateurMetriques <<Protocol>> {
+    + incrementer_compteur(nom, etiquettes)
+    + observer_duree(nom, duree_secondes, etiquettes)
+  }
+  interface LecteurJournalAudit <<Protocol>> {
+    + lire_nouvelles_entrees() : list<EntreeJournalAudit>
+  }
+  interface AccumulateurConversations <<Protocol>> {
+    + enregistrer_tour(conversation_id, horodatage)
+    + enregistrer_echec(conversation_id, horodatage)
+    + cloturer_conversation(conversation_id) : EtatConversationAccumule
+  }
+}
+
+package "application.services" #D8F5D0 {
+  class ServiceVerificationEnvironnement {
+    - _verificateurs : list<VerificateurConnectivite>
+    - _exportateur_metriques : ExportateurMetriques
+    - _etiquettes_globales : dict
+    + executer() : RapportVerificationEnvironnement
+  }
+  class RapportVerificationEnvironnement <<frozen dataclass>> {
+    + resultats : list<ResultatVerification>
+    + tout_dispo : bool
+  }
+  class ServiceInstrumentationJournal {
+    - _lecteur : LecteurJournalAudit
+    - _exportateur_metriques : ExportateurMetriques
+    - _etiquettes_globales : dict
+    + executer() : RapportInstrumentationJournal
+  }
+  class RapportInstrumentationJournal <<frozen dataclass>> {
+    + nombre_entrees : int
+  }
+  class ServiceAnalyseConversations {
+    - _lecteur : LecteurJournalAudit
+    - _accumulateur : AccumulateurConversations
+    - _exportateur_metriques : ExportateurMetriques
+    - _etiquettes_globales : dict
+    + executer() : int
+  }
+}
+
+package "infrastructure.adapters" #FFE3C4 {
+  class HuggingFaceVerificateurConnectivite {
+    - _token : str
+    - _depot_dataset : str
+    + verifier() : ResultatVerification
+  }
+  class UrlVerificateurConnectivite {
+    - _nom : str
+    - _url : str
+    - _code_attendu : int
+    - _delai_max_secondes : float
+    + verifier() : ResultatVerification
+  }
+  class PrometheusExportateurMetriques {
+    - _registre : CollectorRegistry
+    - _compteurs : dict
+    - _histogrammes : dict
+    + incrementer_compteur(nom, etiquettes)
+    + observer_duree(nom, duree_secondes, etiquettes)
+    + exposer_texte() : bytes
+    + registre : CollectorRegistry <<property>>
+  }
+  class JsonlLecteurJournalAudit {
+    - _chemin_journal : Path
+    - _chemin_curseur : Path
+    + lire_nouvelles_entrees() : list<EntreeJournalAudit>
+  }
+  class FichierAccumulateurConversations {
+    - _chemin_etat : Path
+    + enregistrer_tour(conversation_id, horodatage)
+    + enregistrer_echec(conversation_id, horodatage)
+    + cloturer_conversation(conversation_id) : EtatConversationAccumule
+  }
+}
+
+RapportVerificationEnvironnement "1" *-- "0..*" ResultatVerification
+ServiceVerificationEnvironnement ..> RapportVerificationEnvironnement : crée
+ServiceVerificationEnvironnement "1" o-- "0..*" VerificateurConnectivite
+ServiceVerificationEnvironnement "1" o-- "0..1" ExportateurMetriques
+
+ServiceInstrumentationJournal ..> RapportInstrumentationJournal : crée
+ServiceInstrumentationJournal ..> EntreeJournalAudit : consomme
+ServiceInstrumentationJournal "1" o-- "1" LecteurJournalAudit
+ServiceInstrumentationJournal "1" o-- "0..1" ExportateurMetriques
+
+ServiceAnalyseConversations ..> EntreeJournalAudit : consomme
+ServiceAnalyseConversations ..> EtatConversationAccumule : consomme
+ServiceAnalyseConversations "1" o-- "1" LecteurJournalAudit
+ServiceAnalyseConversations "1" o-- "1" AccumulateurConversations
+ServiceAnalyseConversations "1" o-- "1" ExportateurMetriques
+
+HuggingFaceVerificateurConnectivite .up.|> VerificateurConnectivite
+UrlVerificateurConnectivite .up.|> VerificateurConnectivite
+PrometheusExportateurMetriques .up.|> ExportateurMetriques
+JsonlLecteurJournalAudit .up.|> LecteurJournalAudit
+FichierAccumulateurConversations .up.|> AccumulateurConversations
+
+HuggingFaceVerificateurConnectivite ..> ResultatVerification : crée
+UrlVerificateurConnectivite ..> ResultatVerification : crée
+JsonlLecteurJournalAudit ..> EntreeJournalAudit : crée
+FichierAccumulateurConversations ..> EtatConversationAccumule : crée
+
+@enduml

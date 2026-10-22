@@ -1,0 +1,37 @@
+[project]
+name = "chsa-triage-observabilite"
+version = "0.1.0"
+description = "M15 OpenClassrooms : observabilité (Prometheus/Grafana) pour l'agent de triage médical CHSA (m14_ocr), sans modifier le système audité"
+authors = [
+    { name = "racemartin" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28.1",
+    "huggingface-hub>=2.2.0",
+    "prometheus-client>=0.26.0",
+    "python-dotenv>=1.2.4",
+]
+
+[project.scripts]
+verifier-environnement = "chsa_triage_observabilite.interfaces.cli.verifier_environnement:main"
+instrumenter-journal   = "chsa_triage_observabilite.interfaces.cli.instrumenter_journal:main"
+servir-metriques       = "chsa_triage_observabilite.interfaces.cli.servir_metriques:main"
+analyser-conversations = "chsa_triage_observabilite.interfaces.cli.analyser_conversations:main"
+
+[build-system]
+requires = ["uv_build>=0.10.8,<0.11.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.17.1",
+]
+
+[tool.ruff]
+line-length = 80
+target-version = "py312"
+# src/tools/ est un outil partagé repris tel quel de m14_ocr (voir docs/01_installation.md) :
+# jamais reformaté ici pour rester identique entre les deux dépôts.
+extend-exclude = ["src/tools"]
