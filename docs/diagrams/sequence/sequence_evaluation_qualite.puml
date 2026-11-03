@@ -1,0 +1,75 @@
+@startuml sequence_evaluation_qualite
+skinparam backgroundColor white
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam noteBackgroundColor #FFF6CC
+skinparam noteBorderColor #CCAA00
+
+title m15_ocr — Séquence : ServiceEvaluationQualite.executer() (F4, garde-fous)\nGARDE-FOU RÉTROSPECTIF, PAS PRÉVENTIF -- voir note en bas
+
+actor "CLI\n(evaluer_qualite\nou servir_metriques)" as CLI
+participant "ServiceEvaluationQualite" as SERVICE
+participant "LecteurJournalAudit\n(JsonlLecteurJournalAudit,\ncurseur .curseur_qualite)" as LECTEUR
+participant "EvaluateurQualite\n(LlamaServerEvaluateurQualite)" as EVALUATEUR
+participant "llama-server (juge)\nmodèle DÉDIÉ, DISTINCT\nde celui audité -- :8001" as JUGE
+participant "ExportateurMetriques" as METRIQUES
+participant "LogTool" as LOG
+
+CLI -> SERVICE : executer()
+activate SERVICE
+
+SERVICE -> LOG : START_ACTION("evaluation des diagnostics (F4)")
+
+SERVICE -> LECTEUR : lire_nouvelles_entrees()
+activate LECTEUR
+note right of LECTEUR
+  Curseur INDÉPENDANT de F2/F3 :
+  les trois cas d'usage lisent le
+  même fichier, jamais le même
+  curseur.
+end note
+LECTEUR --> SERVICE : list<EntreeJournalAudit>
+deactivate LECTEUR
+
+loop pour chaque nouvelle entrée
+  alt type_evenement == "diagnostic" et sortie non vide
+    SERVICE -> EVALUATEUR : evaluer(entree.sortie)
+    activate EVALUATEUR
+    EVALUATEUR -> JUGE : POST /v1/chat/completions\n(prompt garde-fous : recommandation de\nconsultation, langage non-absolu, pas de\ndonnées personnelles -- JAMAIS l'exactitude clinique)
+    activate JUGE
+    JUGE --> EVALUATEUR : {"score": 0-10, "justification": "..."}
+    deactivate JUGE
+    EVALUATEUR --> SERVICE : ResultatEvaluationQualite\nou None (juge injoignable/\nréponse inexploitable)
+    deactivate EVALUATEUR
+
+    opt résultat non None
+      SERVICE -> METRIQUES : observer_duree(\n  "chsa_garde_fou_score", score, etiquettes_globales)
+
+      alt score < seuil_alerte (défaut 5/10)
+        SERVICE -> METRIQUES : incrementer_compteur(\n  "chsa_garde_fou_alerte_total", etiquettes_globales)
+        SERVICE -> LOG : LEVEL_5_WARNING(score, conversation_id, justification)
+      end
+    end
+  else autre type d'événement
+    SERVICE -> SERVICE : ignoré (pas un diagnostic,\nou pas encore de texte de sortie)
+  end
+end
+
+SERVICE -> LOG : PARAMETER_VALUE(diagnostics_evalues)
+SERVICE -> LOG : FINISH_ACTION
+
+SERVICE --> CLI : nombre_evalues : int
+deactivate SERVICE
+
+note over CLI, JUGE #E8F4FF
+  **Rétrospectif, pas préventif** : ce cycle tourne APRÈS que chsa-triage a
+  déjà répondu à l'infirmier (même sondage périodique que F2/F3). Il ne peut
+  jamais bloquer ni corriger une réponse en temps réel -- sa valeur est la
+  détection et la traçabilité pour un superviseur (tendance, configuration en
+  cause...), jamais une intervention immédiate. Voir
+  `service_evaluation_qualite.py` (docstring du module).
+end note
+
+@enduml

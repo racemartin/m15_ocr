@@ -22,11 +22,16 @@ package "domain.model" #CFE8FF {
     + conversation_id : str
     + version_modele : str
     + metadonnees : dict
+    + sortie : str
   }
   class EtatConversationAccumule <<frozen dataclass>> {
     + nombre_tours : int
     + horodatage_premier_tour : str
     + a_eu_un_echec : bool
+  }
+  class ResultatEvaluationQualite <<frozen dataclass>> {
+    + score : float
+    + justification : str
   }
 }
 
@@ -45,6 +50,9 @@ package "domain.ports" #CFE8FF {
     + enregistrer_tour(conversation_id, horodatage)
     + enregistrer_echec(conversation_id, horodatage)
     + cloturer_conversation(conversation_id) : EtatConversationAccumule
+  }
+  interface EvaluateurQualite <<Protocol>> {
+    + evaluer(texte_diagnostic) : ResultatEvaluationQualite
   }
 }
 
@@ -73,6 +81,14 @@ package "application.services" #D8F5D0 {
     - _accumulateur : AccumulateurConversations
     - _exportateur_metriques : ExportateurMetriques
     - _etiquettes_globales : dict
+    + executer() : int
+  }
+  class ServiceEvaluationQualite {
+    - _lecteur : LecteurJournalAudit
+    - _evaluateur : EvaluateurQualite
+    - _exportateur_metriques : ExportateurMetriques
+    - _etiquettes_globales : dict
+    - _seuil_alerte : float
     + executer() : int
   }
 }
@@ -110,6 +126,11 @@ package "infrastructure.adapters" #FFE3C4 {
     + enregistrer_echec(conversation_id, horodatage)
     + cloturer_conversation(conversation_id) : EtatConversationAccumule
   }
+  class LlamaServerEvaluateurQualite {
+    - _url_base : str
+    - _delai_max_secondes : float
+    + evaluer(texte_diagnostic) : ResultatEvaluationQualite
+  }
 }
 
 RapportVerificationEnvironnement "1" *-- "0..*" ResultatVerification
@@ -128,15 +149,33 @@ ServiceAnalyseConversations "1" o-- "1" LecteurJournalAudit
 ServiceAnalyseConversations "1" o-- "1" AccumulateurConversations
 ServiceAnalyseConversations "1" o-- "1" ExportateurMetriques
 
+ServiceEvaluationQualite ..> EntreeJournalAudit : consomme (champ sortie)
+ServiceEvaluationQualite ..> ResultatEvaluationQualite : consomme
+ServiceEvaluationQualite "1" o-- "1" LecteurJournalAudit
+ServiceEvaluationQualite "1" o-- "1" EvaluateurQualite
+ServiceEvaluationQualite "1" o-- "1" ExportateurMetriques
+
 HuggingFaceVerificateurConnectivite .up.|> VerificateurConnectivite
 UrlVerificateurConnectivite .up.|> VerificateurConnectivite
 PrometheusExportateurMetriques .up.|> ExportateurMetriques
 JsonlLecteurJournalAudit .up.|> LecteurJournalAudit
 FichierAccumulateurConversations .up.|> AccumulateurConversations
+LlamaServerEvaluateurQualite .up.|> EvaluateurQualite
 
 HuggingFaceVerificateurConnectivite ..> ResultatVerification : crée
 UrlVerificateurConnectivite ..> ResultatVerification : crée
 JsonlLecteurJournalAudit ..> EntreeJournalAudit : crée
 FichierAccumulateurConversations ..> EtatConversationAccumule : crée
+LlamaServerEvaluateurQualite ..> ResultatEvaluationQualite : crée
+
+note right of LlamaServerEvaluateurQualite
+  Appelle un llama-server LOCAL et
+  DÉDIÉ, modèle DISTINCT de celui
+  audité (jamais le même, pour ne
+  pas se juger lui-même). Juge la
+  forme/sécurité, jamais l'exactitude
+  clinique (voir docs/00_architecture.md
+  "Juge-LLM (F4)").
+end note
 
 @enduml

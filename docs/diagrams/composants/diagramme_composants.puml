@@ -14,6 +14,7 @@ package "m15_ocr" #D8F5D0 {
   package "interfaces.cli" {
     component "[verifier-environnement]\n(F0, ponctuel)" as VERIF
     component "[instrumenter-journal]\n(F2, ponctuel)" as INSTR
+    component "[evaluer-qualite]\n(F4, ponctuel)" as EVAL_QUALITE
     component "[servir-metriques]\n(scraping continu, orchestre\nles cas d'usage ci-dessous)" as SERVIR
     component "[fabrique_adaptateurs]\n(composition root)" as FABRIQUE
   }
@@ -21,16 +22,22 @@ package "m15_ocr" #D8F5D0 {
   package "application.services" {
     component "[ServiceInstrumentationJournal]\n(F2)" as SVC_INSTR
     component "[ServiceAnalyseConversations]\n(F3)" as SVC_CONV
+    component "[ServiceEvaluationQualite]\n(F4, garde-fous --\nrétrospectif, pas préventif)" as SVC_QUALITE
   }
 
   VERIF ..> FABRIQUE : utilise
   INSTR ..> FABRIQUE : utilise
+  EVAL_QUALITE ..> FABRIQUE : utilise
   SERVIR ..> FABRIQUE : utilise
 
   INSTR ..> SVC_INSTR : utilise
+  EVAL_QUALITE ..> SVC_QUALITE : utilise
   SERVIR ..> SVC_INSTR : utilise\n(1 cycle / 30s)
   SERVIR ..> SVC_CONV : utilise\n(1 cycle / 30s)
+  SERVIR ..> SVC_QUALITE : utilise\n(1 cycle / 30s,\nplus lent -- appel LLM)
 }
+
+node "llama-server (juge)\nmodèle DÉDIÉ, DISTINCT de celui\naudité -- port 8001" as JUGE #D8F5D0
 
 component "[Hugging Face Hub]" as HF #EDEDED
 component "[MLflow]" as MLFLOW #EDEDED
@@ -60,8 +67,19 @@ VERIF -right-> M14_API : requiert\n/sante
 
 SVC_INSTR -right-> M14_JOURNAL : lecture locale\ncurseur ".curseur"
 SVC_CONV -right-> M14_JOURNAL : lecture locale\ncurseur\n".curseur_conversations"
+SVC_QUALITE -right-> M14_JOURNAL : lecture locale\ncurseur ".curseur_qualite"
+SVC_QUALITE -down-> JUGE : évalue (HTTP\nPOST /v1/chat/completions, :8001)
 
 SERVIR -right-> M14_API : requiert\n/sante
+
+note bottom of JUGE
+  Composant PROPRE à m15_ocr (jamais
+  m14_ocr), lancé et exploité par m15.
+  Dessiné séparément du package
+  m15_ocr seulement pour la lisibilité
+  du schéma -- ce n'est PAS une
+  dépendance externe comme HF/MLflow.
+end note
 
 note top of SERVIR
   orchestre aussi ServiceVerificationEnvironnement
