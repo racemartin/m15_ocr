@@ -46,6 +46,7 @@ def test_lit_les_entrees_ecrites(tmp_path: Path) -> None:
     assert len(entrees) == 1
     assert entrees[0].type_evenement == "tour_entretien"
     assert entrees[0].metadonnees["latence_ms"] == 531.0
+    assert entrees[0].sortie == "..."
 
 
 def test_ne_relit_jamais_les_memes_lignes_deux_fois(tmp_path: Path) -> None:

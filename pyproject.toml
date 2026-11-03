@@ -18,6 +18,7 @@ verifier-environnement = "chsa_triage_observabilite.interfaces.cli.verifier_envi
 instrumenter-journal   = "chsa_triage_observabilite.interfaces.cli.instrumenter_journal:main"
 servir-metriques       = "chsa_triage_observabilite.interfaces.cli.servir_metriques:main"
 analyser-conversations = "chsa_triage_observabilite.interfaces.cli.analyser_conversations:main"
+evaluer-qualite        = "chsa_triage_observabilite.interfaces.cli.evaluer_qualite:main"
 
 [build-system]
 requires = ["uv_build>=0.10.8,<0.11.0"]

@@ -17,3 +17,6 @@ wheels/
 
 # Artefacts générés à l'exécution (métriques, index...), jamais du code source
 data/
+
+# Poids de modèles (telechargés, jamais committés)
+models/

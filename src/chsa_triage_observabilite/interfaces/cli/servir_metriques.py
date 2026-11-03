@@ -54,6 +54,9 @@ from chsa_triage_observabilite.infrastructure.adapters.prometheus_exportateur_me
 from chsa_triage_observabilite.interfaces.cli.analyser_conversations import (
     construire_service_analyse_conversations,
 )
+from chsa_triage_observabilite.interfaces.cli.evaluer_qualite import (
+    construire_service_evaluation_qualite,
+)
 from chsa_triage_observabilite.interfaces.cli.fabrique_adaptateurs import (
     construire_etiquettes_globales,
     construire_verificateurs,
@@ -76,6 +79,7 @@ def _sonder_une_fois(
     verificateurs,
     lecteur_journal,
     service_analyse_conversations,
+    service_evaluation_qualite,
     exportateur_metriques,
     etiquettes_globales,
 ) -> None:
@@ -91,6 +95,9 @@ def _sonder_une_fois(
 
     if service_analyse_conversations is not None:
         service_analyse_conversations.executer()
+
+    if service_evaluation_qualite is not None:
+        service_evaluation_qualite.executer()
 
 
 def main() -> None:
@@ -115,6 +122,18 @@ def main() -> None:
         if chemin_journal
         else None
     )
+    # F4 (garde-fous) : chaque appel au juge peut prendre plusieurs secondes
+    # (inférence LLM, contrairement aux autres cas d'usage qui ne font que
+    # lire un fichier) -- un cycle de sondage qui évalue des diagnostics dure
+    # donc plus longtemps que `intervalle`, jamais en parallèle d'un autre
+    # cycle (une seule boucle séquentielle, pas de recouvrement possible).
+    service_evaluation_qualite = (
+        construire_service_evaluation_qualite(
+            chemin_journal, exportateur_metriques, etiquettes_globales
+        )
+        if chemin_journal
+        else None
+    )
 
     start_http_server(port, registry=exportateur_metriques.registre)
 
@@ -127,6 +146,7 @@ def main() -> None:
     log.PARAMETER_VALUE("verificateurs", len(verificateurs))
     log.PARAMETER_VALUE("lecteur_journal", "oui" if lecteur_journal else "non (CHSA_TRIAGE_CHEMIN_JOURNAL_AUDIT absente)")
     log.PARAMETER_VALUE("analyse_conversations", "oui" if service_analyse_conversations else "non")
+    log.PARAMETER_VALUE("evaluation_qualite", "oui" if service_evaluation_qualite else "non")
     print(f"Métriques servies en continu sur http://0.0.0.0:{port}/metrics (Ctrl+C pour arrêter)")
 
     while True:
@@ -134,6 +154,7 @@ def main() -> None:
             verificateurs,
             lecteur_journal,
             service_analyse_conversations,
+            service_evaluation_qualite,
             exportateur_metriques,
             etiquettes_globales,
         )

@@ -20,3 +20,4 @@ class EntreeJournalAudit:
     conversation_id : str
     version_modele  : str
     metadonnees     : dict = field(default_factory=dict)
+    sortie          : str  = ""   # texte genere par chsa-triage (F4, juge qualite)

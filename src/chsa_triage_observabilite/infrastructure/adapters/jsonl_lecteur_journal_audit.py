@@ -71,6 +71,7 @@ class JsonlLecteurJournalAudit:
                         conversation_id = donnees.get("conversation_id", ""),
                         version_modele  = donnees.get("version_modele", ""),
                         metadonnees     = donnees.get("metadonnees", {}),
+                        sortie          = donnees.get("sortie", ""),
                     )
                 )
             nouvel_offset = f.tell()
