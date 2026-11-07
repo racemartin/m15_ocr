@@ -9,6 +9,10 @@
 > Architecture hexagonale (ports et adaptateurs), même discipline que
 > m14_ocr.
 
+**Documents du projet :**
+[Rapport de conduite de projet (PDF)](docs/M15_Rapport_de_conduite_de_projet_AI_Engineering_V1.pdf) ·
+[Support de présentation (PDF)](docs/M15_Support_de_Presentation_V3.pptx.pdf)
+
 ## Pourquoi ce projet
 
 Le code de m14_ocr documente lui-même, dans son propre port
@@ -40,8 +44,8 @@ dans le document) :
   tout nouveau chargement de modèle.
 - **Limite assumée** : le garde-fou est rétrospectif, jamais préventif — il
   ne peut pas bloquer une réponse avant qu'elle n'atteigne son destinataire.
-- **Prochaine étape la plus urgente** : configurer un dépôt Git distant — le
-  dépôt reste local à ce jour, aucun lien public n'existe encore.
+- **Prochaine étape la plus urgente** : F4 (niveau ESI, instrumentation
+  directe de l'API) — le seul cas d'usage de la roadmap encore non démarré.
 
 ## Architecture
 
@@ -71,7 +75,7 @@ lien avec le système audité (m14_ocr) et le juge-LLM dédié :
 ## Démarrage rapide
 
 ```bash
-git clone <url-du-depot> m15_ocr
+git clone https://github.com/racemartin/m15_ocr.git
 cd m15_ocr
 
 uv sync --group dev
