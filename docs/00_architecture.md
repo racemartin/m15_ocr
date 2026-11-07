@@ -29,20 +29,29 @@ Les schémas UML détaillés, chacun à son propre niveau, vivent à côté :
 | Composants | [`diagrams/composants/diagramme_composants.svg`](diagrams/composants/diagramme_composants.svg) |
 | Séquence — `ServiceVerificationEnvironnement` (F0/F1) | [`diagrams/sequence/sequence_verification_environnement.svg`](diagrams/sequence/sequence_verification_environnement.svg) |
 | Séquence — `ServiceInstrumentationJournal` (F2) | [`diagrams/sequence/sequence_instrumentation_journal.svg`](diagrams/sequence/sequence_instrumentation_journal.svg) |
+| Séquence — `ServiceAnalyseConversations` (F3) | [`diagrams/sequence/sequence_analyse_conversations.svg`](diagrams/sequence/sequence_analyse_conversations.svg) |
+| Séquence — `ServiceEvaluationQualite`, garde-fous juge-LLM (F5) | [`diagrams/sequence/sequence_evaluation_qualite.svg`](diagrams/sequence/sequence_evaluation_qualite.svg) |
 | Séquence — exemple générique : conversation type (3 tours + diagnostic), avec les points de mesure du temps explicites | [`diagrams/sequence/sequence_exemple_conversation_type.svg`](diagrams/sequence/sequence_exemple_conversation_type.svg) |
 | Carte des métriques par niveau de domaine (C/R/D/X), état et cas d'usage générateur | [`diagrams/mapa_metricas_triage.svg`](diagrams/mapa_metricas_triage.svg) |
+| Architecture cible résumée (chapitre 3 du rapport) | [`diagrams/architecture_cible.svg`](diagrams/architecture_cible.svg) |
 
 Chacun existe aussi en `.puml` (source), `.png` et `.pdf` dans le même dossier.
 
-### Couches (état actuel : F0 connectivité, F1 métriques, F2 journal d'audit, F3 analyse conversations)
+### Couches (état actuel : F0 connectivité, F1 métriques, F2 journal d'audit, F3 analyse conversations, F5 garde-fous)
 
 | Couche | Rôle | Contenu actuel |
 |---|---|---|
-| `domain/model/` | Structures de données pures | `ResultatVerification`, `EntreeJournalAudit`, `EtatConversationAccumule` |
-| `domain/ports/` | Contrats (`Protocol`), zéro dépendance externe | `VerificateurConnectivite`, `ExportateurMetriques`, `LecteurJournalAudit`, `AccumulateurConversations` |
-| `application/services/` | Cas d'usage, orchestre des ports | `ServiceVerificationEnvironnement`, `ServiceInstrumentationJournal`, `ServiceAnalyseConversations` |
-| `infrastructure/adapters/` | Implémentations concrètes des ports | `HuggingFaceVerificateurConnectivite`, `UrlVerificateurConnectivite`, `PrometheusExportateurMetriques`, `JsonlLecteurJournalAudit`, `FichierAccumulateurConversations` |
-| `interfaces/cli/` | Point d'entrée, seule couche qui lit `.env` | `verifier_environnement`, `instrumenter_journal`, `analyser_conversations`, `servir_metriques`, `fabrique_adaptateurs` (composition root partagée) |
+| `domain/model/` | Structures de données pures | `ResultatVerification`, `EntreeJournalAudit`, `EtatConversationAccumule`, `ResultatEvaluationQualite` |
+| `domain/ports/` | Contrats (`Protocol`), zéro dépendance externe | `VerificateurConnectivite`, `ExportateurMetriques`, `LecteurJournalAudit`, `AccumulateurConversations`, `EvaluateurQualite` |
+| `application/services/` | Cas d'usage, orchestre des ports | `ServiceVerificationEnvironnement`, `ServiceInstrumentationJournal`, `ServiceAnalyseConversations`, `ServiceEvaluationQualite` |
+| `infrastructure/adapters/` | Implémentations concrètes des ports | `HuggingFaceVerificateurConnectivite`, `UrlVerificateurConnectivite`, `PrometheusExportateurMetriques`, `JsonlLecteurJournalAudit`, `FichierAccumulateurConversations`, `LlamaServerEvaluateurQualite` |
+| `interfaces/cli/` | Point d'entrée, seule couche qui lit `.env` | `verifier_environnement`, `instrumenter_journal`, `analyser_conversations`, `evaluer_qualite`, `servir_metriques`, `fabrique_adaptateurs` (composition root partagée) |
+
+Note de numérotation : F4 reste réservé à l'instrumentation de l'API en
+direct pour capturer le niveau ESI (voir "Ce qui viendra ensuite"
+ci-dessous, toujours pas construite) — le garde-fou juge-LLM prend donc
+le numéro F5, pour ne pas réutiliser une étiquette déjà attribuée à
+autre chose.
 
 ### F3 : métriques niveau conversation (agrégats entre plusieurs entrées)
 
@@ -97,6 +106,58 @@ dans `data/metriques_verification.prom`, ou dans
 `CHSA_TRIAGE_CONFIGURATION` est renseignée — un fichier par configuration,
 jamais partagé, pour qu'auditer deux configurations l'une après l'autre
 ne fasse pas disparaître la précédente.
+
+### F5 : garde-fous (juge-LLM, sécurité/forme)
+
+`ServiceEvaluationQualite` fait évaluer chaque diagnostic par un
+juge-LLM LOCAL et DÉDIÉ (modèle DISTINCT de celui audité par m14_ocr,
+pour ne jamais laisser le système s'évaluer lui-même). Comme F3, il
+utilise son PROPRE `LecteurJournalAudit` (curseur
+`<journal>.curseur_qualite`) sur le même fichier, et ne traite que les
+entrées `type_evenement == "diagnostic"` qui portent un champ `sortie`
+non vide (ce champ, auparavant absent du sous-ensemble consommé par
+m15, a été ajouté à `EntreeJournalAudit` spécifiquement pour F5).
+
+GARDE-FOU RÉTROSPECTIF, PAS PRÉVENTIF : ce cas d'usage tourne APRÈS que
+chsa-triage a déjà répondu (même sondage périodique que F2/F3) — il ne
+peut jamais bloquer ni corriger une réponse avant qu'elle n'atteigne
+son destinataire. Sa valeur est la détection et la traçabilité pour un
+superviseur (tendance, configuration en cause...), jamais une
+intervention en temps réel.
+
+Le juge ne juge QUE la forme et la sécurité du texte (recommandation
+explicite de consulter un professionnel de santé, absence de langage
+de diagnostic absolu/définitif, absence de donnée personnelle
+identifiante) — JAMAIS l'exactitude clinique du diagnostic, qu'aucun
+petit modèle local ne peut valider de façon défendable. Le modèle
+(`Qwen2.5-1.5B-Instruct`, quantifié `q4_k_m`, ~1.1 Go) a été choisi
+après qu'un premier essai (`Phi-3-mini-4k-instruct`, ~2.4 Go) a fait
+grimper la mémoire réelle au-delà de 4 Go sur cet environnement limité
+à 6 Go et a dû être interrompu — Qwen2.5-1.5B se stabilise autour de
+1.8 Go, avec marge de sécurité.
+
+`LlamaServerEvaluateurQualite` appelle un `llama-server` dédié
+(`CHSA_JUGE_URL_BASE`, défaut `http://127.0.0.1:8001`, port distinct de
+celui de chsa-triage) via `POST /v1/chat/completions` (API compatible
+OpenAI), avec un prompt qui exige une réponse JSON stricte
+(`{"score": 0-10, "justification": "..."}`). Jamais d'API distante :
+un hôpital ne peut pas envoyer de texte de diagnostic à un tiers.
+Jamais d'exception propagée : un juge injoignable ou une réponse
+inexploitable devient `None`, qui n'émet aucune métrique mais
+n'interrompt jamais le sondage des autres cas d'usage.
+
+Métriques produites : `chsa_garde_fou_score` (histogramme, 0 à 10) et
+`chsa_garde_fou_alerte_total` (compteur, incrémenté seulement si
+`score < CHSA_JUGE_SEUIL_ALERTE`, défaut 5) — accompagné d'un
+`LEVEL_5_WARNING` dans les logs pour chaque alerte, avec la
+justification du juge.
+
+Vérifié en conditions réelles (2026-11-03) : un diagnostic avec
+recommandation de consultation et sans langage absolu a reçu un score
+de 8/10 ; un diagnostic délibérément non conforme (langage de
+diagnostic absolu + nom de patient) a reçu un score de 0/10 et a
+déclenché l'alerte — confirmé directement dans les métriques
+Prometheus exposées (`data/metriques_qualite__<configuration>.prom`).
 
 ### Pourquoi un seul port pour toutes les dépendances externes
 

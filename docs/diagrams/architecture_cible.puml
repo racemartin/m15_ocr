@@ -1,0 +1,55 @@
+@startuml architecture_cible
+skinparam backgroundColor white
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 14
+skinparam shadowing false
+skinparam ArrowColor #555555
+skinparam componentStyle rectangle
+skinparam roundcorner 12
+skinparam nodesep 50
+skinparam ranksep 60
+
+title Architecture cible — vue résumée (rapport, chapitre 3)\nTrois systèmes, zéro donnée transmise à un tiers
+
+actor "Infirmier" as INF
+
+package "m14_ocr — système audité (NON MODIFIÉ)" as M14 #FFD6D6 {
+  component "Streamlit\n+ API FastAPI" as M14_APP
+  component "llama-server\n(modèle de triage)" as M14_LLM
+  file "journal_audit\n(.jsonl, local)" as JOURNAL
+  M14_APP -> M14_LLM : inférence
+  M14_APP ..> JOURNAL : écrit chaque\ntour et diagnostic
+}
+
+package "m15_ocr — observabilité et garde-fous" as M15 #D8F5D0 {
+  component "servir-metriques\n(F0-F3, F5)" as SERVIR
+  component "llama-server\n(juge dédié, sécurité/forme)" as JUGE
+  SERVIR -> JUGE : évalue chaque\ndiagnostic
+}
+
+package "Pile de supervision (Docker)" as SUPERV #D6E8FF {
+  component "Prometheus" as PROM
+  component "Grafana\n(12 panneaux)" as GRAF
+  PROM -> GRAF : alimente
+}
+
+INF <-> M14_APP : conversation,\ndiagnostic
+JOURNAL <.. SERVIR : lecture locale\n(jamais HTTP)
+SERVIR -> PROM : /metrics\n(scrape local)
+GRAF --> INF : tableau de bord
+
+note bottom of M15
+  **Aucune frontière distante** : lecture de fichier local
+  ou HTTP vers localhost uniquement. Le juge-LLM tourne sur
+  un modèle DÉDIÉ et DISTINCT de celui audité (jamais
+  d'auto-évaluation), et ne quitte jamais la machine —
+  exigence non négociable en contexte hospitalier.
+end note
+
+note bottom of M14
+  m15_ocr n'importe et ne modifie
+  aucun fichier de m14_ocr : audit
+  depuis l'extérieur uniquement.
+end note
+
+@enduml

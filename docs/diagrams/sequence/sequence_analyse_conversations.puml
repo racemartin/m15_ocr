@@ -1,0 +1,63 @@
+@startuml sequence_analyse_conversations
+skinparam backgroundColor white
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam noteBackgroundColor #FFF6CC
+skinparam noteBorderColor #CCAA00
+
+title m15_ocr — Séquence : ServiceAnalyseConversations.executer() (F3)
+
+actor "CLI\n(analyser_conversations\nou servir_metriques)" as CLI
+participant "ServiceAnalyseConversations\n--\napplication/services/\nservice_analyse_conversations.py" as SERVICE
+participant "LecteurJournalAudit\n(JsonlLecteurJournalAudit,\ncurseur .curseur_conversations)\n--\ninfrastructure/adapters/\njsonl_lecteur_journal_audit.py" as LECTEUR
+participant "AccumulateurConversations\n(FichierAccumulateurConversations)\n--\ndomain/ports/\naccumulateur_conversations.py\ninfrastructure/adapters/\nfichier_accumulateur_conversations.py" as ACCUM
+participant "ExportateurMetriques\n--\ndomain/ports/\nexportateur_metriques.py" as METRIQUES
+
+CLI -> SERVICE : executer()
+activate SERVICE
+
+SERVICE -> LECTEUR : lire_nouvelles_entrees()
+activate LECTEUR
+note right of LECTEUR
+  Curseur INDÉPENDANT de F2/F5 :
+  les trois cas d'usage lisent le
+  même fichier, jamais le même
+  curseur.
+end note
+LECTEUR --> SERVICE : list<EntreeJournalAudit>
+deactivate LECTEUR
+
+loop pour chaque nouvelle entrée
+  alt type_evenement == "tour_entretien"
+    SERVICE -> ACCUM : enregistrer_tour(\n  conversation_id, horodatage)
+  else type_evenement == "echec_inference"
+    SERVICE -> ACCUM : enregistrer_echec(\n  conversation_id, horodatage)
+  else type_evenement == "diagnostic_reformule"
+    SERVICE -> METRIQUES : incrementer_compteur(\n  "chsa_conversation_reformulation_total",\n  etiquettes_globales)
+  else type_evenement == "diagnostic"
+    SERVICE -> ACCUM : cloturer_conversation(conversation_id)
+    activate ACCUM
+    ACCUM --> SERVICE : EtatConversationAccumule\n(domain/model/\netat_conversation_accumule.py)\nou None (jamais vu de tour\npour cette conversation)
+    deactivate ACCUM
+
+    opt etat non None
+      SERVICE -> METRIQUES : observer_duree(\n  "chsa_conversation_nombre_tours",\n  etat.nombre_tours, etiquettes_globales)
+      SERVICE -> METRIQUES : observer_duree(\n  "chsa_conversation_temps_diagnostic_secondes",\n  secondes_entre(premier_tour, horodatage),\n  etiquettes_globales)
+      SERVICE -> METRIQUES : incrementer_compteur(\n  "chsa_conversation_avec_echec_total",\n  {avec_echec: etat.a_eu_un_echec, ...})
+    end
+  end
+end
+
+SERVICE --> CLI : nombre_conversations_cloturees : int
+deactivate SERVICE
+
+note over CLI, ACCUM #E8F4FF
+  **C6 (taux d'échec) mesure seulement les conversations qui aboutissent** :
+  une conversation qui échoue et n'est jamais relancée jusqu'à un diagnostic
+  ne se clôture jamais, donc elle n'émet jamais de métrique — limite connue
+  et assumée. Voir `service_analyse_conversations.py` (docstring du module).
+end note
+
+@enduml
