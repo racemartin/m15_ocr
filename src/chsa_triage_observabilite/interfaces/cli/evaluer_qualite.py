@@ -1,5 +1,5 @@
 """
-Point d'entrée CLI (F4, garde-fous) : fait évaluer chaque diagnostic du
+Point d'entrée CLI (F5, garde-fous) : fait évaluer chaque diagnostic du
 journal d'audit de m14_ocr par un juge-LLM LOCAL et DÉDIÉ (jamais le même
 modèle que celui audité). Ponctuel, même discipline que
 `analyser-conversations` : relancer périodiquement pour un suivi continu,
@@ -112,7 +112,7 @@ def main() -> None:
     nombre_evalues = service.executer()
 
     print("=" * LARGEUR_SEPARATEUR)
-    print("EVALUATION QUALITE (F4, garde-fous -- juge-LLM)")
+    print("EVALUATION QUALITE (F5, garde-fous -- juge-LLM)")
     print("=" * LARGEUR_SEPARATEUR)
     print(f"  Fichier lu...................: {chemin_journal}")
     print(f"  Juge..........................: {os.environ.get('CHSA_JUGE_URL_BASE', URL_JUGE_PAR_DEFAUT)}")

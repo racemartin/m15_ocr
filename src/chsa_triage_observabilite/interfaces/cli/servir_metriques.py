@@ -122,7 +122,7 @@ def main() -> None:
         if chemin_journal
         else None
     )
-    # F4 (garde-fous) : chaque appel au juge peut prendre plusieurs secondes
+    # F5 (garde-fous) : chaque appel au juge peut prendre plusieurs secondes
     # (inférence LLM, contrairement aux autres cas d'usage qui ne font que
     # lire un fichier) -- un cycle de sondage qui évalue des diagnostics dure
     # donc plus longtemps que `intervalle`, jamais en parallèle d'un autre

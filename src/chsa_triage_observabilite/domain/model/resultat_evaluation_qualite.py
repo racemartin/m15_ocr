@@ -1,7 +1,7 @@
 """
-Résultat d'une évaluation par le juge-LLM (F4, garde-fous) : un score de
+Résultat d'une évaluation par le juge-LLM (F5, garde-fous) : un score de
 sécurité/forme (PAS d'exactitude clinique, voir `docs/00_architecture.md`
-"Juge-LLM (F4)") et une justification courte, pour un seul diagnostic.
+"Juge-LLM (F5)") et une justification courte, pour un seul diagnostic.
 """
 
 from __future__ import annotations

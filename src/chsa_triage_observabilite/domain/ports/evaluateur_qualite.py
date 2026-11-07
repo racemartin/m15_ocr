@@ -1,5 +1,5 @@
 """
-Port (F4, garde-fous) : demander à un juge l'évaluation de sécurité/forme
+Port (F5, garde-fous) : demander à un juge l'évaluation de sécurité/forme
 d'un diagnostic, sans savoir quel modèle ni quel moteur répond derrière
 (`llama-server` local aujourd'hui, potentiellement un autre backend demain).
 Même discipline que `ExportateurMetriques` : un seul contrat, plusieurs
@@ -16,7 +16,7 @@ from chsa_triage_observabilite.domain.model.resultat_evaluation_qualite import (
 
 
 class EvaluateurQualite(Protocol):
-    """Port F4 : évaluer un texte de diagnostic."""
+    """Port F5 : évaluer un texte de diagnostic."""
 
     def evaluer(self, texte_diagnostic: str) -> ResultatEvaluationQualite | None:
         """Retourne un résultat, ou `None` si le juge est injoignable ou a

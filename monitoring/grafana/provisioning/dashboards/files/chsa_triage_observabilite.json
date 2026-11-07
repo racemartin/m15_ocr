@@ -211,6 +211,52 @@
         }
       ],
       "fieldConfig": { "defaults": { "unit": "currencyUSD" }, "overrides": [] }
+    },
+    {
+      "id": 11,
+      "title": "Score garde-fous, juge-LLM (p50 / p95) — D8",
+      "type": "timeseries",
+      "description": "Juge-LLM DÉDIÉ (modèle distinct de celui audité) : évalue la FORME et la SÉCURITÉ de chaque diagnostic (recommandation de consulter, absence de langage absolu, absence de donnée personnelle) — JAMAIS son exactitude clinique. Garde-fou RÉTROSPECTIF, pas préventif : voir docs/00_architecture.md.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(chsa_garde_fou_score_bucket{configuration=~\"$configuration\"}[30m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(chsa_garde_fou_score_bucket{configuration=~\"$configuration\"}[30m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "none", "min": 0, "max": 10 }, "overrides": [] }
+    },
+    {
+      "id": 12,
+      "title": "Alertes garde-fous (score < seuil) — D9",
+      "type": "stat",
+      "description": "Proportion de diagnostics évalués dont le score garde-fous est passé sous le seuil d'alerte (CHSA_JUGE_SEUIL_ALERTE, défaut 5/10) — détection rétrospective, pas un blocage en temps réel (voir docs/00_architecture.md).",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "(sum(chsa_garde_fou_alerte_total{configuration=~\"$configuration\"}) / sum(chsa_garde_fou_score_count{configuration=~\"$configuration\"})) or vector(0)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.1 },
+              { "color": "red", "value": 0.25 }
+            ]
+          }
+        },
+        "overrides": []
+      }
     }
   ]
 }

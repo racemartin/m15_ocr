@@ -1,8 +1,8 @@
 """
-Adaptateur du port `EvaluateurQualite` (F4, garde-fous) : interroge un
+Adaptateur du port `EvaluateurQualite` (F5, garde-fous) : interroge un
 `llama-server` LOCAL et DÉDIÉ (modèle distinct de celui audité, pour ne
 jamais laisser le système s'évaluer lui-même — voir `docs/00_architecture.md`
-"Juge-LLM (F4)"), via son API HTTP compatible OpenAI
+"Juge-LLM (F5)"), via son API HTTP compatible OpenAI
 (`POST /v1/chat/completions`). Jamais d'API distante : un hôpital ne peut
 pas envoyer de texte de diagnostic à un tiers.
 """
@@ -62,6 +62,11 @@ class LlamaServerEvaluateurQualite:
         self._log.START_CALL_MANAGER_FUNCTION(
             "LlamaServerEvaluateurQualite", "evaluer", f"url={self._url_base}"
         )
+        self._log.PARAMETER_VALUE("longueur_texte_diagnostic", len(texte_diagnostic))
+        self._log.PARAMETER_VALUE(
+            "texte_diagnostic_recu",
+            texte_diagnostic[:300] + ("..." if len(texte_diagnostic) > 300 else ""),
+        )
 
         try:
             reponse = httpx.post(
@@ -97,7 +102,20 @@ class LlamaServerEvaluateurQualite:
             )
             return None
 
+        self._log.LEVEL_7_INFO(
+            "LlamaServerEvaluateurQualite",
+            f"reponse brute du juge (avant parsing) : {contenu!r}",
+        )
+
         resultat = self._parser_contenu(contenu)
+        if resultat is not None:
+            self._log.LOG_DICT(
+                {
+                    "score": resultat.score,
+                    "justification": resultat.justification,
+                },
+                "decision_du_juge",
+            )
         self._log.FINISH_CALL_MANAGER_FUNCTION(
             "LlamaServerEvaluateurQualite",
             "evaluer",

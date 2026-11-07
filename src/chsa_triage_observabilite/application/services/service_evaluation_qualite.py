@@ -1,7 +1,7 @@
 """
-Cas d'usage (F4, garde-fous) : fait évaluer chaque diagnostic par un
+Cas d'usage (F5, garde-fous) : fait évaluer chaque diagnostic par un
 juge-LLM dédié (sécurité/forme, jamais l'exactitude clinique — voir
-`docs/00_architecture.md` "Juge-LLM (F4)") et émet un score ainsi qu'une
+`docs/00_architecture.md` "Juge-LLM (F5)") et émet un score ainsi qu'une
 alerte distincte sous un seuil.
 
 GARDE-FOU RÉTROSPECTIF, PAS PRÉVENTIF : ce service lit le journal
@@ -63,7 +63,7 @@ class ServiceEvaluationQualite:
     # #########################################################################
     def executer(self) -> int:
         self._log.START_ACTION(
-            "ServiceEvaluationQualite", "executer", "evaluation des diagnostics (F4)"
+            "ServiceEvaluationQualite", "executer", "evaluation des diagnostics (F5)"
         )
 
         entrees = self._lecteur.lire_nouvelles_entrees()
@@ -85,15 +85,34 @@ class ServiceEvaluationQualite:
         if entree.type_evenement != "diagnostic" or not entree.sortie:
             return False
 
+        self._log.LEVEL_7_INFO(
+            "ServiceEvaluationQualite",
+            f"garde-fou sollicite pour conversation_id={entree.conversation_id} "
+            f"(horodatage={entree.horodatage}, {len(entree.sortie)} caracteres a evaluer)",
+        )
+
         resultat = self._evaluateur.evaluer(entree.sortie)
         if resultat is None:
+            self._log.LEVEL_5_WARNING(
+                "ServiceEvaluationQualite",
+                f"aucune decision du juge pour conversation_id={entree.conversation_id} "
+                "(juge injoignable ou reponse inexploitable) -- aucune metrique emise",
+            )
             return False
 
         self._exportateur_metriques.observer_duree(
             NOM_METRIQUE_SCORE, resultat.score, dict(self._etiquettes_globales)
         )
 
-        if resultat.score < self._seuil_alerte:
+        sous_le_seuil = resultat.score < self._seuil_alerte
+        self._log.LEVEL_7_INFO(
+            "ServiceEvaluationQualite",
+            f"decision rendue pour conversation_id={entree.conversation_id} : "
+            f"score={resultat.score}/10, seuil={self._seuil_alerte}, "
+            f"sous_le_seuil={sous_le_seuil}, justification={resultat.justification!r}",
+        )
+
+        if sous_le_seuil:
             self._exportateur_metriques.incrementer_compteur(
                 NOM_METRIQUE_ALERTE, dict(self._etiquettes_globales)
             )

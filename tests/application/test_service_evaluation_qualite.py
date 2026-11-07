@@ -1,5 +1,5 @@
 """
-Tests du cas d'usage `ServiceEvaluationQualite` (F4, garde-fous), avec des
+Tests du cas d'usage `ServiceEvaluationQualite` (F5, garde-fous), avec des
 doublures en mémoire -- même discipline que les autres cas d'usage de ce
 projet.
 """
