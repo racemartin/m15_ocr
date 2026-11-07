@@ -7,20 +7,17 @@ skinparam sequenceMessageAlign center
 skinparam noteBackgroundColor #FFF6CC
 skinparam noteBorderColor #CCAA00
 
-title m15_ocr — Séquence : ServiceEvaluationQualite.executer() (F4, garde-fous)\nGARDE-FOU RÉTROSPECTIF, PAS PRÉVENTIF -- voir note en bas
+title m15_ocr — Séquence : ServiceEvaluationQualite.executer() (F5, garde-fous)\nGARDE-FOU RÉTROSPECTIF, PAS PRÉVENTIF -- voir note en bas
 
 actor "CLI\n(evaluer_qualite\nou servir_metriques)" as CLI
-participant "ServiceEvaluationQualite" as SERVICE
-participant "LecteurJournalAudit\n(JsonlLecteurJournalAudit,\ncurseur .curseur_qualite)" as LECTEUR
-participant "EvaluateurQualite\n(LlamaServerEvaluateurQualite)" as EVALUATEUR
+participant "ServiceEvaluationQualite\n--\napplication/services/\nservice_evaluation_qualite.py" as SERVICE
+participant "LecteurJournalAudit\n(JsonlLecteurJournalAudit,\ncurseur .curseur_qualite)\n--\ninfrastructure/adapters/\njsonl_lecteur_journal_audit.py" as LECTEUR
+participant "EvaluateurQualite\n(LlamaServerEvaluateurQualite)\n--\ndomain/ports/evaluateur_qualite.py\ninfrastructure/adapters/\nllama_server_evaluateur_qualite.py" as EVALUATEUR
 participant "llama-server (juge)\nmodèle DÉDIÉ, DISTINCT\nde celui audité -- :8001" as JUGE
-participant "ExportateurMetriques" as METRIQUES
-participant "LogTool" as LOG
+participant "ExportateurMetriques\n--\ndomain/ports/\nexportateur_metriques.py" as METRIQUES
 
 CLI -> SERVICE : executer()
 activate SERVICE
-
-SERVICE -> LOG : START_ACTION("evaluation des diagnostics (F4)")
 
 SERVICE -> LECTEUR : lire_nouvelles_entrees()
 activate LECTEUR
@@ -41,7 +38,7 @@ loop pour chaque nouvelle entrée
     activate JUGE
     JUGE --> EVALUATEUR : {"score": 0-10, "justification": "..."}
     deactivate JUGE
-    EVALUATEUR --> SERVICE : ResultatEvaluationQualite\nou None (juge injoignable/\nréponse inexploitable)
+    EVALUATEUR --> SERVICE : ResultatEvaluationQualite\n(domain/model/resultat_evaluation_qualite.py)\nou None (juge injoignable/\nréponse inexploitable)
     deactivate EVALUATEUR
 
     opt résultat non None
@@ -49,16 +46,12 @@ loop pour chaque nouvelle entrée
 
       alt score < seuil_alerte (défaut 5/10)
         SERVICE -> METRIQUES : incrementer_compteur(\n  "chsa_garde_fou_alerte_total", etiquettes_globales)
-        SERVICE -> LOG : LEVEL_5_WARNING(score, conversation_id, justification)
       end
     end
   else autre type d'événement
     SERVICE -> SERVICE : ignoré (pas un diagnostic,\nou pas encore de texte de sortie)
   end
 end
-
-SERVICE -> LOG : PARAMETER_VALUE(diagnostics_evalues)
-SERVICE -> LOG : FINISH_ACTION
 
 SERVICE --> CLI : nombre_evalues : int
 deactivate SERVICE

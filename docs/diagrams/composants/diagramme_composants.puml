@@ -14,7 +14,7 @@ package "m15_ocr" #D8F5D0 {
   package "interfaces.cli" {
     component "[verifier-environnement]\n(F0, ponctuel)" as VERIF
     component "[instrumenter-journal]\n(F2, ponctuel)" as INSTR
-    component "[evaluer-qualite]\n(F4, ponctuel)" as EVAL_QUALITE
+    component "[evaluer-qualite]\n(F5, ponctuel)" as EVAL_QUALITE
     component "[servir-metriques]\n(scraping continu, orchestre\nles cas d'usage ci-dessous)" as SERVIR
     component "[fabrique_adaptateurs]\n(composition root)" as FABRIQUE
   }
@@ -22,7 +22,7 @@ package "m15_ocr" #D8F5D0 {
   package "application.services" {
     component "[ServiceInstrumentationJournal]\n(F2)" as SVC_INSTR
     component "[ServiceAnalyseConversations]\n(F3)" as SVC_CONV
-    component "[ServiceEvaluationQualite]\n(F4, garde-fous --\nrétrospectif, pas préventif)" as SVC_QUALITE
+    component "[ServiceEvaluationQualite]\n(F5, garde-fous --\nrétrospectif, pas préventif)" as SVC_QUALITE
   }
 
   VERIF ..> FABRIQUE : utilise

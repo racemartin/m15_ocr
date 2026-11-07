@@ -7,7 +7,7 @@ skinparam shadowing false
 skinparam packageStyle rectangle
 skinparam ArrowColor #555555
 
-title m15_ocr — Architecture hexagonale (ports et adaptateurs)\nÉtat actuel : F0 connectivité, F1 métriques, F2 journal d'audit, F3 conversations, F4 garde-fous (juge-LLM)
+title m15_ocr — Architecture hexagonale (ports et adaptateurs)\nÉtat actuel : F0 connectivité, F1 métriques, F2 journal d'audit, F3 conversations, F5 garde-fous (juge-LLM)
 
 package "domain" as DOMAIN #CFE8FF {
   class ResultatVerification <<model>> {
@@ -89,7 +89,7 @@ cloud "Dépendances externes (HTTP)" as EXT #EDEDED {
 
 node "m14_ocr (NON MODIFIÉ)\nsystème audité" as M14 #FFD6D6
 file "journal_audit__<config>.jsonl\n(fichier LOCAL, même machine)" as JOURNAL #FFD6D6
-node "llama-server (juge, F4)\nmodèle DÉDIÉ, propre à m15_ocr\n(jamais m14_ocr) — :8001" as JUGE #D8F5D0
+node "llama-server (juge, F5)\nmodèle DÉDIÉ, propre à m15_ocr\n(jamais m14_ocr) — :8001" as JUGE #D8F5D0
 
 CLI --> APPLICATION : construit et exécute
 APPLICATION --> DOMAIN : dépend des ports, pas des adaptateurs
@@ -103,7 +103,7 @@ CHSA .right.> M14 : exposé par
 
 PrometheusExportateurMetriques -[#CC0000]-> CLI : data/metriques_*.prom\n(écrit sur disque)
 
-JsonlLecteurJournalAudit .down.> JOURNAL : lecture locale\n(F2/F3/F4, pas de HTTP)
+JsonlLecteurJournalAudit .down.> JOURNAL : lecture locale\n(F2/F3/F5, pas de HTTP)
 JOURNAL .right.> M14 : écrit par
 
 LlamaServerEvaluateurQualite -[#1A7A1A]-> JUGE : POST /v1/chat/completions\n(sécurité/forme, JAMAIS\nl'exactitude clinique)

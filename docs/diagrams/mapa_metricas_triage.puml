@@ -22,7 +22,7 @@ rectangle "**C — CONVERSATION**\n(ServiceAnalyseConversations, F3)\n\n<color:#
 
 rectangle "**R — QUESTION / RÉPONSE**\n(ServiceInstrumentationJournal, F2)\n\n<color:#1A7A1A>●</color> **R1** Latence de la réponse\n<color:#1A7A1A>●</color> **R2** Tokens de sortie\n<color:#B8860B>●</color> **R3** Tokens / seconde\n<color:#CC0000>●</color> **R4** Longueur de la question générée\n<color:#CC0000>●</color> **R5** Pertinence (heuristique)\n<color:#CC0000>●</color> **R6** Pertinence (RAGAS / juge)\n<color:#B8860B>●</color> **R7** Position du tour dans la conversation\n<color:#CC0000>●</color> **R8** Dégénérescence / boucle\n<color:#1A7A1A>●</color> **R9** Volume de requêtes\n<color:#1A7A1A>●</color> **R10** Taux d'erreur" as R #E3ECF9
 
-rectangle "**D — DIAGNOSTIC**\n(ServiceInstrumentationJournal F2,\nServiceEvaluationQualite F4)\n\n<color:#1A7A1A>●</color> **D1** Conformité du format\n<color:#1A7A1A>●</color> **D2** Latence du diagnostic\n<color:#1A7A1A>●</color> **D3** Tokens de sortie\n<color:#CC0000>●</color> **D4** Niveau ESI\n<color:#CC0000>●</color> **D5** Longueur du raisonnement\n<color:#CC0000>●</color> **D6** Distribution des niveaux ESI\n<color:#CC0000>●</color> **D7** Cas ESI urgents (1-2) et leur latence\n<color:#1A7A1A>●</color> **D8** Score garde-fous (juge-LLM, sécurité/forme)\n<color:#1A7A1A>●</color> **D9** Alertes garde-fous (score sous seuil)" as D #FBE8E8
+rectangle "**D — DIAGNOSTIC**\n(ServiceInstrumentationJournal F2,\nServiceEvaluationQualite F5)\n\n<color:#1A7A1A>●</color> **D1** Conformité du format\n<color:#1A7A1A>●</color> **D2** Latence du diagnostic\n<color:#1A7A1A>●</color> **D3** Tokens de sortie\n<color:#CC0000>●</color> **D4** Niveau ESI\n<color:#CC0000>●</color> **D5** Longueur du raisonnement\n<color:#CC0000>●</color> **D6** Distribution des niveaux ESI\n<color:#CC0000>●</color> **D7** Cas ESI urgents (1-2) et leur latence\n<color:#1A7A1A>●</color> **D8** Score garde-fous (juge-LLM, sécurité/forme)\n<color:#1A7A1A>●</color> **D9** Alertes garde-fous (score sous seuil)" as D #FBE8E8
 
 rectangle "**X — TRANSVERSALES**\n(toutes couches confondues)\n\n<color:#1A7A1A>●</color> **X1** Comparaison entre configurations\n<color:#1A7A1A>●</color> **X2** Coût estimé cumulé\n<color:#B8860B>●</color> **X3** Carte de chaleur de l'activité\n<color:#CC0000>●</color> **X4** Latence inférence pure vs HTTP totale" as X #F3E9FB
 
@@ -31,7 +31,7 @@ R -right-> D : clôture par\nle diagnostic
 D -down-> X : comparé entre\nconfigurations
 
 note bottom of D
-  D8/D9 (F4) jugent la FORME/SÉCURITÉ du
+  D8/D9 (F5) jugent la FORME/SÉCURITÉ du
   diagnostic (recommandation de consulter,
   langage non-absolu, pas de données
   personnelles), JAMAIS sa pertinence

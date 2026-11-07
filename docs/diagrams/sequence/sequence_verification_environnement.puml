@@ -11,12 +11,9 @@ actor "CLI\n(verifier_environnement\nou servir_metriques)" as CLI
 participant "ServiceVerificationEnvironnement" as SERVICE
 participant "VerificateurConnectivite\n(un par dépendance)" as VERIF
 participant "ExportateurMetriques" as METRIQUES
-participant "LogTool" as LOG
 
 CLI -> SERVICE : executer()
 activate SERVICE
-
-SERVICE -> LOG : START_ACTION(n vérificateurs)
 
 loop pour chaque vérificateur enregistré
   SERVICE -> VERIF : verifier()
@@ -33,9 +30,6 @@ loop pour chaque résultat obtenu
     SERVICE -> SERVICE : ne rien faire\n(rétrocompatible F0)
   end
 end
-
-SERVICE -> LOG : PARAMETER_VALUE(tout_dispo)
-SERVICE -> LOG : FINISH_ACTION
 
 SERVICE --> CLI : RapportVerificationEnvironnement\n(resultats, tout_dispo)
 deactivate SERVICE

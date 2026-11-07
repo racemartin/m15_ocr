@@ -175,7 +175,7 @@ note right of LlamaServerEvaluateurQualite
   pas se juger lui-même). Juge la
   forme/sécurité, jamais l'exactitude
   clinique (voir docs/00_architecture.md
-  "Juge-LLM (F4)").
+  "Juge-LLM (F5)").
 end note
 
 @enduml

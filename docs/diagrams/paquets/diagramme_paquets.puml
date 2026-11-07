@@ -25,10 +25,6 @@ package "interfaces" as INTERFACES #F5D0E8 {
   package "cli" as INTERFACES_CLI
 }
 
-package "tools.rafael" as TOOLS #EDEDED {
-  package "log_tool" as LOG_TOOL
-}
-
 INTERFACES_CLI --> APPLICATION_SERVICES : construit et exécute
 INTERFACES_CLI --> INFRA_ADAPTERS : injecte les adaptateurs concrets
 APPLICATION_SERVICES --> DOMAIN_PORTS : dépend des contrats
@@ -36,20 +32,11 @@ APPLICATION_SERVICES --> DOMAIN_MODEL : utilise les structures
 INFRA_ADAPTERS ..|> DOMAIN_PORTS : implémente
 INFRA_ADAPTERS --> DOMAIN_MODEL : produit/consomme
 
-APPLICATION_SERVICES ..> LOG_TOOL : journalise (START_ACTION/FINISH_ACTION)
-INFRA_ADAPTERS ..> LOG_TOOL : journalise (START_CALL/FINISH_CALL)
-
 note right of DOMAIN
   Le domaine ne dépend d'AUCUN
   autre paquet (sauf la bibliothèque
   standard) : c'est le centre de
   l'hexagone, jamais l'inverse.
-end note
-
-note bottom of TOOLS
-  Outil partagé repris tel quel
-  de m14_ocr, jamais reformaté ici
-  (voir docs/01_installation.md).
 end note
 
 @enduml

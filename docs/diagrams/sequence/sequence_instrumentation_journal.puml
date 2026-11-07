@@ -11,12 +11,9 @@ actor "CLI\n(instrumenter_journal\nou servir_metriques)" as CLI
 participant "ServiceInstrumentationJournal" as SERVICE
 participant "LecteurJournalAudit\n(JsonlLecteurJournalAudit)" as LECTEUR
 participant "ExportateurMetriques" as METRIQUES
-participant "LogTool" as LOG
 
 CLI -> SERVICE : executer()
 activate SERVICE
-
-SERVICE -> LOG : START_ACTION("lecture du journal d'audit")
 
 SERVICE -> LECTEUR : lire_nouvelles_entrees()
 activate LECTEUR
@@ -43,9 +40,6 @@ loop pour chaque nouvelle entrée
     end
   end
 end
-
-SERVICE -> LOG : PARAMETER_VALUE(nombre_entrees)
-SERVICE -> LOG : FINISH_ACTION
 
 SERVICE --> CLI : RapportInstrumentationJournal\n(nombre_entrees)
 deactivate SERVICE
