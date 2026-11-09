@@ -1,0 +1,284 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>Carte Mentale AI Engineer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+
+<style>
+:root {
+  --bg: #fbfaf8;
+  --panel: #f3f1ec;
+  --panel-border: #e4e0d6;
+  --text: #22251f;
+  --muted: #6c6f66;
+  --accent: #2e7d72;
+  --accent-soft: #e3f0ed;
+  --todo-bg: #fdf3e2;
+  --todo-border: #e3b256;
+  --todo-text: #7a5a14;
+  --chip-bg: #ffffff;
+  --shadow: 0 1px 2px rgba(34,37,31,.04), 0 8px 24px rgba(34,37,31,.05);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151713;
+    --panel: #1d201a;
+    --panel-border: #2c2f26;
+    --text: #ecece4;
+    --muted: #9a9d92;
+    --accent: #5fc2b2;
+    --accent-soft: #1d2d2a;
+    --todo-bg: #2b2415;
+    --todo-border: #6e5420;
+    --todo-text: #e3b256;
+    --chip-bg: #22251f;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #151713;
+  --panel: #1d201a;
+  --panel-border: #2c2f26;
+  --text: #ecece4;
+  --muted: #9a9d92;
+  --accent: #5fc2b2;
+  --accent-soft: #1d2d2a;
+  --todo-bg: #2b2415;
+  --todo-border: #6e5420;
+  --todo-text: #e3b256;
+  --chip-bg: #22251f;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+  line-height: 1.55;
+}
+.wrap { max-width: 980px; margin: 0 auto; padding: 48px 24px 80px; }
+
+header.hero { margin-bottom: 36px; }
+.eyebrow { text-transform: uppercase; letter-spacing: .12em; font-size: .72rem; font-weight: 700; color: var(--accent); margin: 0 0 10px; }
+h1 { font-size: clamp(1.7rem, 4vw, 2.3rem); font-weight: 700; margin: 0 0 10px; letter-spacing: -.01em; }
+.lead { color: var(--muted); font-size: 1rem; max-width: 70ch; margin: 0; }
+
+.status-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.badge { display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; font-weight: 600; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--panel-border); background: var(--chip-bg); color: var(--muted); }
+.badge.todo { background: var(--todo-bg); border-color: var(--todo-border); color: var(--todo-text); }
+.badge.done { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+section { margin-top: 44px; }
+.section-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px; }
+.section-head h2 { font-size: 1.2rem; font-weight: 700; margin: 0; }
+.section-head .count { font-size: .8rem; color: var(--muted); }
+
+.diagram-card {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+  overflow-x: auto;
+}
+.diagram-card pre.mermaid { margin: 0; min-width: 900px; }
+
+.branch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.card {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+.card h3 { font-size: .95rem; font-weight: 700; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+.card h3 .tag { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); background: var(--accent-soft); padding: 2px 8px; border-radius: 999px; }
+.card ul { margin: 0; padding-left: 18px; }
+.card li { font-size: .88rem; color: var(--text); margin-bottom: 4px; }
+.card li.muted { color: var(--muted); }
+.card a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.card a:hover { text-decoration: underline; }
+
+.project-table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+.project-table th, .project-table td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--panel-border); vertical-align: top; }
+.project-table th { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
+.project-table td.code { font-weight: 700; color: var(--accent); white-space: nowrap; }
+.project-table a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.project-table a:hover { text-decoration: underline; }
+
+.todo-block {
+  background: var(--todo-bg);
+  border: 1px solid var(--todo-border);
+  border-radius: 16px;
+  padding: 18px 20px;
+  margin-top: 12px;
+}
+.todo-block h3 { margin: 0 0 8px; font-size: .92rem; color: var(--todo-text); }
+.todo-block p.prompt { margin: 0 0 6px; font-size: .86rem; color: var(--todo-text); font-weight: 600; }
+.todo-block textarea {
+  width: 100%;
+  min-height: 70px;
+  margin-top: 4px;
+  border-radius: 10px;
+  border: 1px dashed var(--todo-border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: .86rem;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--panel-border); color: var(--muted); font-size: .8rem; }
+</style>
+
+<div class="wrap">
+
+  <header class="hero">
+    <p class="eyebrow">Étape 2 — Construisez votre portfolio en situation professionnelle</p>
+    <h1>Carte mentale — Rafael Cerezo Martin, AI Engineer</h1>
+    <div class="status-row">
+      <span class="badge done">✓ Projets &amp; compétences — données réelles</span>
+      <span class="badge done">✓ Liens vers les livrables</span>
+    </div>
+  </header>
+
+  <section id="diagramme">
+    <div class="section-head"><h2>Vue d'ensemble</h2></div>
+    <div class="diagram-card">
+<img src="Carte_Mentale_Rafael_CEREZO_MARTIN_AI_Engineer_V3.png" alt="Carte mentale — Rafael Cerezo Martin, AI Engineer" style="width:100%;height:auto;display:block;">
+    </div>
+  </section>
+
+  <section id="projet-personnel">
+    <div class="section-head"><h2>1. Projet personnel technique</h2><span class="count">CHSA Triage — M14 + M15</span></div>
+    <div class="branch-grid">
+      <div class="card">
+        <h3>M14 — Agent de triage médical <span class="tag">LLM médical</span></h3>
+        <ul>
+          <li>POC d'agent IA pour orienter les patients aux urgences</li>
+          <li>Qwen3-1.7B, fine-tuning LoRA/SFT/DPO, MLflow, Cloud GPU</li>
+          <li><a href="https://racemartin.github.io/assets/pdfs/m14-medical-triage-llm.pdf" target="_blank" rel="noopener">Livrable PDF ↗</a></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>M15 — Observabilité &amp; garde-fous <span class="tag">Observabilité</span></h3>
+        <ul>
+          <li>Audit d'un agent IA déjà en production, sans le modifier</li>
+          <li>Prometheus/Grafana, juge-LLM local rétrospectif, architecture hexagonale</li>
+          <li><a href="https://racemartin.github.io/assets/pdfs/m15-chsa-triage-observability.pdf" target="_blank" rel="noopener">Livrable PDF ↗</a></li>
+          <li><a href="https://github.com/racemartin/m15_ocr" target="_blank" rel="noopener">Code source ↗</a></li>
+        </ul>
+      </div>
+    </div>
+
+  </section>
+
+  <section id="formation">
+    <div class="section-head"><h2>2. Projets de formation</h2><span class="count">12 missions, M02 → M13</span></div>
+    <table class="project-table">
+      <thead>
+        <tr><th>Projet</th><th>Thème</th><th>Compétences / outils mobilisés</th><th>Livrable</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="code">M02</td><td>ModeTrends — segmentation vestimentaire</td><td>Computer vision, Hugging Face API, estimation de coût</td><td><a href="https://racemartin.github.io/assets/pdfs/m02-modetrends-segmentation.pdf" target="_blank" rel="noopener">PDF ↗</a></td></tr>
+        <tr><td class="code">M03</td><td>Seattle Energy — consommation &amp; CO₂</td><td>Régression, feature engineering, interprétabilité (SHAP)</td><td><a href="https://racemartin.github.io/assets/pdfs/m03-seattle-energy.pdf" target="_blank" rel="noopener">PDF ↗</a></td></tr>
+        <tr><td class="code">M04</td><td>TechNova — attrition RH</td><td>Classification, analyse RH, SHAP &amp; insights métier</td><td><a href="https://racemartin.github.io/assets/pdfs/m04-technova-attrition.pdf" target="_blank" rel="noopener">PDF ↗</a></td></tr>
+        <tr><td class="code">M05</td><td>Déploiement d'un modèle ML</td><td>FastAPI, MLflow, BentoML, PostgreSQL</td><td><a href="https://racemartin.github.io/assets/pdfs/m05-ml-api-deployment.pdf" target="_blank" rel="noopener">PDF ↗</a></td></tr>
+        <tr><td class="code">M06</td><td>Scoring crédit — MLOps partie 1</td><td>Model registry, tracking, métriques métier</td><td><a href="https://racemartin.github.io/assets/pdfs/m06-credit-scoring-mlops-1.pdf" target="_blank" rel="noopener">PDF ↗</a></td></tr>
+        <tr><td class="code">M07</td><td>Puls-Events — assistant RAG culturel</td><td>LangChain, Mistral, FAISS, API REST</td><td><a href="https://racemartin.github.io/assets/pdfs/m07-rag-events.pdf" target="_blank" rel="noopener">PDF ↗</a></td></tr>
+        <tr><td class="code">M08</td><td>Scoring crédit — déploiement &amp; monitoring</td><td>Monitoring, drift analysis, dashboard</td><td><a href="https://racemartin.github.io/assets/pdfs/m08-credit-scoring-monitoring.pdf" target="_blank" rel="noopener">PDF ↗</a></td></tr>
+        <tr><td class="code">M09</td><td>App mobile de recommandation mode</td><td>Cadrage produit, risques IA, roadmap</td><td><a href="https://racemartin.github.io/assets/pdfs/m09-ai-product-framing.pdf" target="_blank" rel="noopener">PDF ↗</a></td></tr>
+        <tr><td class="code">M10</td><td>Curelytics IA — IRM cérébrales</td><td>ResNet50, K-Means/DBSCAN, semi-supervisé</td><td><a href="https://racemartin.github.io/assets/pdfs/m10-medical-vision.pdf" target="_blank" rel="noopener">PDF ↗</a></td></tr>
+        <tr><td class="code">M11</td><td>Eagle-1 — agent RL LunarLander</td><td>Stable-Baselines3, PPO/DQN, FastAPI, Streamlit</td><td><a href="https://racemartin.github.io/assets/pdfs/m11-reinforcement-learning-lunarlander.pdf" target="_blank" rel="noopener">PDF ↗</a></td></tr>
+        <tr><td class="code">M12</td><td>CheckIt.AI — fake news multimodal</td><td>Architecture hexagonale, Apache Airflow, scraping</td><td><a href="https://racemartin.github.io/assets/pdfs/m12-multimodal-fake-news-etl.pdf" target="_blank" rel="noopener">PDF ↗</a></td></tr>
+        <tr><td class="code">M13</td><td>FFE Chess Agent — apprentissage des échecs</td><td>LangGraph, Milvus, MongoDB, FastAPI</td><td><a href="https://racemartin.github.io/assets/pdfs/m13-chess-ai-agent.pdf" target="_blank" rel="noopener">PDF ↗</a></td></tr>
+      </tbody>
+    </table>
+
+  </section>
+
+  <section id="experience">
+    <div class="section-head"><h2>3. Expériences professionnelles</h2><span class="count">optionnel — avant la formation IA</span></div>
+    <div class="branch-grid">
+      <div class="card">
+        <h3>Seriel / XEFI Bayonne <span class="tag">2016–2025</span></h3>
+        <ul>
+          <li>Analyste développeur full-stack</li>
+          <li>Passerelles ERP (Wavesoft, Prestashop, Proginov, Magento)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Robosoft / Neomades / ESTIA <span class="tag">1996–2014</span></h3>
+        <ul>
+          <li>Robotique temps réel, systèmes embarqués (MPC555)</li>
+          <li>Direction d'une équipe de 7 personnes (Neomades) → publication DSM'10</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="competences">
+    <div class="section-head"><h2>4. Compétences &amp; outils IA</h2><span class="count">transverses à tous les projets</span></div>
+    <div class="branch-grid">
+      <div class="card">
+        <h3>Frameworks &amp; bibliothèques IA</h3>
+        <ul>
+          <li>scikit-learn, pandas, NumPy, SHAP</li>
+          <li>LangChain, LangGraph, FAISS, Milvus</li>
+          <li>Computer vision, NLP, reinforcement learning (Stable-Baselines3)</li>
+          <li>Fine-tuning LoRA / SFT / DPO</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>MLOps</h3>
+        <ul>
+          <li>MLflow, BentoML, model registry</li>
+          <li>Monitoring, drift analysis, CI/CD</li>
+          <li>Apache Airflow (orchestration)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Cloud &amp; conteneurisation</h3>
+        <ul>
+          <li>Docker (tous les projets M05 →M15)</li>
+          <li class="muted">Kubernetes, AWS/Azure/GCP managés — non pratiqués en formation, à mentionner comme axe de progrès</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="softskills">
+    <div class="section-head"><h2>5. Soft skills pour le métier d'AI Engineer</h2></div>
+    <div class="branch-grid">
+      <div class="card">
+        <h3>Autonomie &amp; gestion de projet</h3>
+        <ul><li class="muted">Développeur unique sur M14/M15 ; direction d'une équipe de 7 personnes chez Neomades</li></ul>
+      </div>
+      <div class="card">
+        <h3>Rigueur scientifique</h3>
+        <ul><li class="muted">Choix du modèle juge sur preuve empirique (mémoire réelle), pas sur réputation (M15)</li></ul>
+      </div>
+      <div class="card">
+        <h3>Communication &amp; vulgarisation</h3>
+        <ul><li class="muted">Rapport, présentation et portfolio rédigés pour un public non-expert</li></ul>
+      </div>
+      <div class="card">
+        <h3>Esprit critique</h3>
+        <ul><li class="muted">Limites documentées explicitement (C5, C7) plutôt que masquées</li></ul>
+      </div>
+    </div>
+  </section>
+
+
+
+  <footer>
+    étape 2, "Construisez votre portfolio en situation professionnelle". 
+  </footer>
+
+</div>
+
+
+
+</body></html>
